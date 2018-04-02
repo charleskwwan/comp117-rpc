@@ -1,3 +1,139 @@
 #!/usr/bin/env python
 
-print("hello world!")
+# rpcgenerate
+#   - generates proxies and stubs for idl files
+#   - usage: rpcgenerate [-h] idlfiles [idlfiles ...]
+#   - output: <name>.proxy.cpp, <name>.stub.cpp
+#
+#   - by: Justin Jo and Charles Wan
+#
+# NEEDSWORK:
+#   -
+#
+# Notes:
+#   - this program uses python3
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+
+
+##### MISCELLANEOUS FUNCTIONS
+
+# parse_args
+#   - parse cmd line arguments
+#   - returns: argparse.Namespace, [argname=argvalue, ...]
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description='Generate proxies and stubs from idl files',
+    )
+    parser.add_argument(
+        'idlfiles',
+        type=str,
+        nargs='+',
+        help='an idl file',
+    )
+
+    args = parser.parse_args()
+    return args
+
+
+# prints out program usage
+def usage():
+    print('usage: {} [-h] idlfiles [idlfiles...]'.format(sys.arv[0]))
+
+
+# isfile
+#   - returns:
+#       - true, if file fname exists and is readable
+#       - false, otherwise
+
+def isfile(fname):
+    return os.path.isfile(fname) and os.access(fname, os.R_OK)
+
+
+# get_file_prefix
+#   - for an idl file <idlname>.idl, extracts and returns idlname
+#   - if idlfile is does not end with .idl, it is assumed not to be an idl
+#     file, and None is returned
+
+def get_file_prefix(idlfile):
+    m = re.search('(.+).idl', idlfile)
+    return m.group(1) if m else None
+
+
+##### IDL PROCESSING FUNCTIONS
+
+# generate_proxy
+#   - generates and saves a proxy for a given file
+#   - file will be named: <prefix>.proxy.cpp
+#
+# args:
+#   - decls [dict]: idl file contents loaded as json into a python dict
+#   - prefix [str]: the prefix of the idl file
+#
+# returns: n/a
+
+def generate_proxy(decls, prefix):
+    pass
+
+
+# generate_stub
+#   - generates and saves a stub for a given file
+#   - file will be named: <prefix>.stub.cpp
+#
+# args:
+#   - decls [dict]: idl file contents loaded as json into a python dict
+#   - prefix [str]: the prefix of the idl file
+#
+# returns: n/a
+
+def generate_stub(decls, prefix):
+    pass
+
+
+# generate
+#   - generates and saves a proxy and stub for a given file
+#   - if a file does not exist or cannot be opened, an error message is printed
+#     and the function terminates
+#
+# args:
+#   - fname [str]: fname, must be of the pattern *.idl
+#
+# returns: n/a
+
+def generate(fname):
+    if not isfile(fname):
+        print("error: '{}' does not exist or could not be opened".format(fname))
+        return
+    else:
+        prefix = get_file_prefix(fname) # save prefix for naming things
+        if not prefix:
+            print("error: '{}' must be named '<prefix>.idl'".format(fname))
+            return
+
+    # parse idl declarations into python dictionary
+    decls = json.loads(subprocess.check_output(["idl_to_json", fname]))
+
+    # generate files
+    generate_proxy(decls, prefix)
+    generate_stub(decls, prefix)
+
+
+##### MAIN
+
+def main():
+    args = parse_args()
+
+    # temp
+    for f in args.idlfiles:
+        generate(f)
+    # temp
+
+
+if __name__ == '__main__':
+    main()
