@@ -66,20 +66,80 @@ def get_file_prefix(idlfile):
     return m.group(1) if m else None
 
 
+# clean_type
+#   - some complex types in the idl's json format have extra unnecessary chars
+#   - clean_type removes them and returns the cleaned type
+#
+# cleaned characters:
+#   - leading '__'
+
+def clean_type(ty):
+    m = re.search('__(\S+)', ty)
+    return m.groups()[0] if m else ty
+
+
 ##### IDL PROCESSING FUNCTIONS
 
 ### SHARED
+
+# generate_funcheader
+#   - generates a header for a c++ function using a dict representing a
+#     functions type
+#   - header format: 'returntype funcname (argtype argnamem, ...)'
+#   - note: curly braces are not included
+
+def generate_funcheader(funcname, funcdict):
+    returntype = clean_type(funcdict['return_type'])
+    args = [ # iterate over pairs of arguments, organize into list of arg strs
+        (clean_type(p['type']) + ' ' + p['name'])
+        for p in funcdict['arguments']
+    ]
+    return returntype + ' ' + funcname + ' (' + ', '.join(args) + ')'
+
+
+# generate_vardecl
+#   - generates a c++ line declaring a variable with a given type
+#   - declaration format: 'vartype varname([digit])*'
+#   - note: terminating semi colon is NOT included
+
+def generate_vardecl(vartype, varname):
+    vartype = clean_type(vartype)
+
+    if '[' in vartype and ']' in vartype: # array type
+        m = re.search('([^\[\]]+)([\[\]0-9]+)', vartype)
+        vartype = m.groups()[0]
+        varname += m.groups()[1]
+
+    return vartype + ' ' + varname
+
 
 # generate_readcheck
 #   - generates a c++ func that reads from a socket and verifies that exactly
 #     buflen bytes were read
 #   - returns 0 if correct number of bytes read, -1 otherwise
 
-def generate_readcheck(is_stub):
+def generate_readcheck(prefix, is_stub):
     sock = 'RPC' + ('STUB' if is_stub else 'PROXY') + 'SOCKET'
     return (
-        'int readAndCheck(char *buf, ssize_t buflen) {\n'
-        '  return ' + sock + '->read(buf, buflen) != buflen ? -1 : 0;\n'
+        'void readAndCheck(char *buf, ssize_t buflen) {\n'
+        '  ssize_t readlen = ' + sock + '->read(buf, buflen);\n'
+        '  if (readlen != buflen) {\n'
+        '    c150debug->printf(\n'
+        '      C150RPCDEBUG,\n'
+        '      "' + prefix + '.stub: expected %d bytes, but got %d",\n'
+        '      buflen, readlen\n'
+        '    );\n'
+        '    if (' + sock + '->eof()) {\n'
+        '      c150debug->printf(\n'
+        '        C150RPCDEBUG,\n'
+        '        "' + prefix + '.stub: EOF signaled on input"\n'
+        '      );\n'
+        '    } else {\n'
+        '      throw C150Exception(\n'
+        '        "' + prefix + '.stub: unexpected 0 length read without eof"\n'
+        '      );\n'
+        '    }\n'
+        '  }\n'
         '}\n'
     )
 
@@ -100,27 +160,11 @@ def generate_readstring(prefix, is_stub):
         '  char lastRead;\n'
         '  int i = 0;\n'
         '\n'
-        '  s.clear();\n'
+        '  s.clear();\n' # clear to ensure append from beginning
         '\n'
         '  while (maxLength <= 0 || i < maxLength) {\n'
-        '    if (' + sock + '->read(&lastRead, 1) == 0) {\n'
-        '      c150debug->printf(\n'
-        '        C150RPCDEBUG,\n'
-        '        "' + prefix + '.stub: read zero length msg, checking EOF"\n'
-        '      );\n'
-        '      if (RPCSTUBSOCKET->eof()) {\n'
-        '        c150debug->printf(\n'
-        '          C150RPCDEBUG,\n'
-        '          "' + prefix + '.stub: EOF signaled on input"\n'
-        '        );\n'
-        '      } else {\n'
-        '        throw C150Exception(\n'
-        '          "' + prefix + '.stub: unexpected 0 length read without eof"\n'
-        '        );\n'
-        '      }\n'
-        '    } else {\n'
-        '      s += lastRead;\n'
-        '    }\n'
+        '    readAndCheck(&lastRead, 1);\n'
+        '    s += lastRead;\n'
         '\n'
         "    if (lastRead == '\\0') {\n"
         '      break;\n'
@@ -149,22 +193,23 @@ def generate_readstring(prefix, is_stub):
 
 def generate_shared(prefix, is_stub):
     includes = \
-        '#include "' + prefix + '.idl"\n' + \
-        '#include "rpc' + ('stub' if is_stub else 'proxy') + 'helper.h"\n' + \
-        '#include <cstdio>\n' + \
-        '#include <cstring>\n' + \
-        '#include <string>\n' + \
-        '#include "c150debug.h"\n'
+        '#include <cstdio>\n' +\
+        '#include <cstring>\n' +\
+        '#include <string>\n' +\
+        '#include "c150debug.h"\n' +\
+        '#include "rpc' + ('stub' if is_stub else 'proxy') + 'helper.h"\n' +\
+        '#include "' + prefix + '.idl"\n'
     namespaces = \
         'using namespace std;\n' + \
         'using namespace C150NETWORK;\n'
 
     shared = [
         includes + namespaces,
-        generate_readcheck(is_stub),
+        generate_readcheck(prefix, is_stub),
         generate_readstring(prefix, is_stub),
     ]
     return '\n'.join(shared)
+
 
 ### PROXY
 
@@ -201,6 +246,117 @@ def generate_badfunc(prefix):
     )
 
 
+# generate_argreads
+#   - for each variable, add the necessary number of reads to fill the variable
+#     off the wire
+#   - for simple types like void/float, only 1 read is necessary
+#   - for array types, for loop to read 1 per element
+#   - for structs, we do 1 read per member
+#   - if arg types are nested, we nest the number of reads, according to the
+#     above
+#
+# args:
+#   - argname [str]: name of argument
+#   - argtype [str]: type of argument, should have an entry in typedict
+#   - typedict [dict]: dictionary of types
+#   - n [int]: number of recursive calls so far, initialized to 0, should not be
+#       used by nonrecursive calls
+#       - needed to guarantee that iterators in for loops are unique
+#
+# returns [str]: c++ string of arg reads, or None if invalid type found
+
+BUILTIN_SIZES = {
+    'string': None,
+    'int': 4,
+    'float': 4,
+    'void': None,
+}
+
+def generate_argreads(argname, argtype, typedict, n=0):
+    if argtype in typedict:
+        type_of_type = typedict[argtype]['type_of_type']
+    else:
+        return None # type not found, invalid
+
+    if type_of_type == 'builtin':
+        if argtype == 'string':
+            return 'readString(' + argname + ', 0);\n' # 0 for infinite length
+
+        else: # should be int/float
+            argsize = str(BUILTIN_SIZES[argtype])
+            return 'readAndCheck((char *)&(' + argname + '), ' + argsize + ');\n'
+
+    elif type_of_type == 'array':
+        # for each level of array, generate a for loop
+        iterator = 'i' + str(n)
+        arrstr = 'for (int {0} = 0; {0} < {1}; {0}++) {{\n'.format(
+            iterator,
+            str(typedict[argtype]['element_count']),
+        )
+
+        arrstr += generate_argreads(
+            argname + '[' + iterator + ']', # including indexing syntax
+            typedict[argtype]['member_type'], # element type update
+            typedict,
+            n + 1,
+        )
+
+        return arrstr + '}\n'
+
+    elif type_of_type == 'struct':
+        # iterate over each member of the struct and recursively call
+        return ''.join([
+            generate_argreads(
+                argname + '.' + p['name'], # include struct member access
+                p['type'], # member type update
+                typedict,
+                n + 1,
+            )
+            for p in typedict[argtype]['members']
+        ])
+
+    else: # invalid type of type found, bug
+        return None
+
+
+# generate_stubfunc
+#   - generates a c++ function
+#
+# args:
+#   - funcname [str]: name of the function to write
+#       - funcname must exist within decls['functions']
+#   - decls [dict]: a 
+#   - prefix [str]: the prefix of the idl file
+#
+# returns [str]:
+#   - c++ function as a string
+
+def generate_stubfunc(funcname, decls, prefix):
+    funcdict = decls['functions'][funcname] # assumed to exist in decls
+
+    # generate variable/argument declarations, followed by calls to read values
+    # from socket
+    argstrs = [
+        # declaration \ read
+        generate_vardecl(p['type'], p['name']) + ';\n' +\
+        generate_argreads(p['name'], p['type'], decls['types'])
+        for p in funcdict['arguments']
+    ]
+
+    # generate line to make call to funcname and return result
+    callstr = 'return {}({});'.format(
+        funcname,
+        ', '.join([p['name'] for p in funcdict['arguments']]) # args
+    )
+
+    return '{} _{}(){{\n{}\n{}\n}}\n'.format(
+        funcdict['return_type'], 
+        funcname,
+        '\n'.join(argstrs), # arg declarations and reads
+        callstr,
+    )
+
+
 # generate_stub
 #   - generates and saves a stub for a given file
 #   - file will be named: <prefix>.stub.cpp
@@ -216,6 +372,10 @@ def generate_stub(decls, prefix):
         generate_shared(prefix, True), # shared with proxy
         generate_badfunc(prefix),
     ]
+
+    # add functions to stub content
+    for funcname in decls['functions']:
+        stub_content.append(generate_stubfunc(funcname, decls, prefix))
 
     with open(prefix + '.stub.cpp', 'w+') as f:
         f.write('\n'.join(stub_content))
