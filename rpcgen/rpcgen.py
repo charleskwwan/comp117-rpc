@@ -9,9 +9,13 @@
 # by: Justin Jo and Charles
 
 import argparse
+import json
+import subprocess
 
 import utils
 import shared
+import proxy
+import stub
 
 
 ##### MISCELLANEOUS FUNCTIONS
@@ -52,15 +56,13 @@ def usage():
 #   returns [str]: generated c++ code
 
 def generate_shared(prefix, is_stub):
-    headers = [
-        '<cstdio>', '<cstring>', '<string>', '"c150debug.h"',
+    headers = shared.SHARED_HEADERS + [
         '"rpc' + ('stub' if is_stub else 'proxy') + 'helper.h"',
-        '"' + prefix + '.idl"'
+        '"' + prefix + '.idl"',
     ]
-    namespaces = ['std', 'C150NETWORK']
 
     return '\n'.join([
-        generate_incls(headers, namespaces),
+        shared.generate_incls(headers, shared.SHARED_NAMESPACES),
     ])
 
 
@@ -69,12 +71,19 @@ def generate_shared(prefix, is_stub):
 #   - proxy file name: <prefix>.proxy.cpp
 #
 #   args:
-#   - decls [dict]: idl file contents loaded as json into a python dict
+#   - funcsdict [dict]: idl func declarations in json
+#   - typesdict [dict]: idl type declarations in json
 #   - prefix [str]: the prefix of the idl file
 
-def generate_proxy(decls, prefix):
+def generate_proxy(funcsdict, typesdict, prefix):
+    func_proxies = '\n'.join([
+        proxy.generate_funcproxy(f, funcsdict, typesdict)
+        for f in funcsdict.keys()
+    ])
+
     proxy_content = [
         generate_shared(prefix, False),
+        func_proxies,
     ]
 
     with open(prefix + '.proxy.cpp', 'w+') as f:
@@ -86,12 +95,20 @@ def generate_proxy(decls, prefix):
 #   - stub file name: <prefix>.stub.cpp
 #
 #   args:
-#   - decls [dict]: idl file contents loaded as json into a python dict
+#   - funcsdict [dict]: idl func declarations in json
+#   - typesdict [dict]: idl type declarations in json
 #   - prefix [str]: the prefix of the idl file
 
-def generate_stub(decls, prefix):
+def generate_stub(funcsdict, typesdict, prefix):
+    func_stubs = '\n'.join([
+        stub.generate_funcstub(f, funcsdict, typesdict)
+        for f in funcsdict.keys()
+    ])
+
     stub_content = [
         generate_shared(prefix, True),
+        func_stubs,
+        stub.generate_dispatch(funcsdict, prefix),
     ]
 
     with open(prefix + '.stub.cpp', 'w+') as f:
@@ -109,11 +126,11 @@ def generate_stub(decls, prefix):
 # returns: n/a
 
 def generate(fname):
-    if not isfile(fname):
+    if not utils.isfile(fname):
         print("error: '{}' does not exist or could not be opened".format(fname))
         return
     else:
-        prefix = get_file_prefix(fname) # save prefix for naming things
+        prefix = utils.get_file_prefix(fname) # save prefix for naming things
         if not prefix:
             print("error: '{}' must be named '<prefix>.idl'".format(fname))
             return
@@ -121,10 +138,12 @@ def generate(fname):
     # parse idl declarations into python dictionary
     decls = json.loads(subprocess.check_output(["./idl_to_json", fname])
         .decode('utf-8'))
+    funcsdict = decls['functions']
+    typesdict = decls['types']
 
     # generate files
-    generate_proxy(decls, prefix)
-    generate_stub(decls, prefix)
+    generate_proxy(funcsdict, typesdict, prefix)
+    generate_stub(funcsdict, typesdict, prefix)
 
 
 ##### MAIN

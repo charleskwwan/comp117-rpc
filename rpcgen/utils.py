@@ -37,6 +37,30 @@ def clean_type(ty):
     return m.groups()[0] if m else ty
 
 
+# get_type_size
+#   - calculates the size of a type
+
+def get_type_size(ty, typesdict):
+    tydict = typesdict[ty]
+    type_of_type = tydict['type_of_type']
+
+    if type_of_type == 'builtin':
+        if ty == 'int' or ty == 'float':
+            return 4
+        elif ty == 'string' or ty == 'void':
+            return 0
+
+    elif type_of_type == 'array':
+        return tydict['element_count'] * \
+               get_type_size(tydict['member_type'], typesdict)
+
+    elif type_of_type == 'struct':
+        return sum([
+            get_type_size(p['type'], typesdict)
+            for p in tydict['members']
+        ])
+
+
 # generate_var_decl
 #   - generates a c++ variable declaration 
 #   - decl format: vartype varname([digit]*)
@@ -71,7 +95,7 @@ def generate_vardecl(vartype, varname):
 def generate_funcheader(funcname, funcdict):
     returntype = clean_type(funcdict['return_type'])    
     args = [ # iterate over pairs of arguments, organize into list of arg strs
-        (clean_type(p['type']) + ' ' + p['name'])
+        generate_vardecl(p['type'], p['name'])
         for p in funcdict['arguments']
     ]
     return returntype + ' ' + funcname + ' (' + ', '.join(args) + ')'
@@ -93,3 +117,20 @@ def generate_funccall(funcname, funcargs):
         funcname,
         ', '.join(funcargs)
     )
+
+
+# generate_forloop
+#   - generates the first line of a c++ for loop
+#   - assumes a for loop that increments an iterator by one each iteration until
+#     a given maximum
+#
+#   args:
+#   - iterator [str]: iterator variable name
+#   - lo [int]: starting value of iteratr
+#   - hi [int]: final value of iterator
+#
+#   notes:
+#   - curly braces not included
+
+def generate_forloop(iterator, lo, hi):
+    return 'for (int {0} = {1}; {0} < {2}; {0}++)'.format(iterator, lo, hi)
