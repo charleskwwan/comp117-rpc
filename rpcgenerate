@@ -14,6 +14,7 @@
 #   - this program uses python3
 
 import argparse
+import itertools
 import json
 import os
 import re
@@ -66,13 +67,58 @@ def get_file_prefix(idlfile):
     return m.group(1) if m else None
 
 
+# clean_type
+#   - some complex types in the idl's json format have extra unnecessary chars
+#   - clean_type removes them and returns the cleaned type
+#
+# cleaned characters:
+#   - leading '__'
+
+def clean_type(ty):
+    m = re.search('__(\S+)', ty)
+    return m.groups()[0] if m else ty
+
+
 ##### IDL PROCESSING FUNCTIONS
+
+### SHARED
+
+# generate_funcheader
+#   - generates a header for a c++ function using a dict representing a
+#     functions type
+#   - header format: 'returntype funcname (argtype argnamem, ...)'
+#   - note: curly braces are not included
+
+def generate_funcheader(funcname, funcdict):
+    returntype = clean_type(funcdict['return_type'])
+    args = [ # iterate over pairs of arguments, organize into list of arg strs
+        (clean_type(p['type']) + ' ' + p['name'])
+        for p in funcdict['arguments']
+    ]
+    return returntype + ' ' + funcname + ' (' + ', '.join(args) + ')'
+
+
+# generate_vardecl
+#   - generates a c++ line declaring a variable with a given type
+#   - declaration format: 'vartype varname([digit])*'
+#   - note: terminating semi colon is NOT included
+
+def generate_vardecl(vartype, varname):
+    vartype = clean_type(vartype)
+
+    if '[' in vartype and ']' in vartype: # array type
+        m = re.search('([^\[\]]+)([\[\]0-9]+)', vartype)
+        vartype = m.groups()[0]
+        varname += m.groups()[1]
+
+    return vartype + ' ' + varname
+
 
 # generate_shared
 #   - generates code shared among both proxy and stub files
 #
 # args:
-#   - prefix [str]: the prefix of the idl file
+#   - prefix  [str]: the prefix of the idl file
 #   - is_stub [bool]: true if stub, false if proxy
 #
 # returns: string containing generated code
@@ -88,7 +134,79 @@ def generate_shared(prefix, is_stub):
     namespaces = \
         'using namespace std;\n' + \
         'using namespace C150NETWORK;\n'
-    return includes + namespaces
+    functions = \
+        'void sendArg(void *var, unsigned int varSize) {\n' + \
+        'for (unsigned int i=0; i<varSize; i++) {\n' + \
+        'RPC' + ('STUB' if is_stub else 'PROXY') + \
+        'SOCKET->write(((char *)var)[i], 1);\n' + \
+        '}\n' + \
+        '}\n'
+    return includes + namespaces + functions
+
+
+# generate_send
+#   - generates sending of data for a given parameter
+#
+# args:
+#   - name  [string]: name of the parameter
+#
+# returns: string containing generated code
+
+def generate_send(name):
+    return 'sendArg((void *)&{}, sizeof({}));\n'.format(name, name)
+
+
+# unpack_send
+#   - generates send statements for every element in the array passed to it
+#
+# args:
+#   - unpacked [array]: array of strings denoting each element to be sent
+#
+# returns: string with the send statments for all elements
+
+def unpack_send(unpacked):
+    unpacked_str = ''
+    for line in unpacked:
+        unpacked_str += generate_send(line)
+    return unpacked_str
+
+
+# unpack_array
+#   - generates a string for every element within an array
+#
+# args:
+#   - types [dict]: map of the types in the given idl file
+#   - arg   [dict]: variable to be unpacked
+#
+# returns: dict holding array of strings denoting each element in the array
+#          and the type of elements in the array
+
+def unpack_array(types, arg, elements = ['']):
+    array_sizes = []
+    curr_type = types[arg['type']]
+    if curr_type['type_of_type'] == 'builtin': # don't expand builtin types
+        return [arg['name']]
+    while curr_type['type_of_type'] == 'array': # record sizes of arrays
+        array_sizes.append(curr_type['element_count'])
+        curr_type = types[curr_type['member_type']]
+    for depth in array_sizes: # generate every member of the array
+        unpack = []
+        for line in elements:
+            unpack.extend([line + '[{}]'.format(i) for i in range(depth)])
+        elements = unpack
+    return {'elements': elements, 'type': curr_type}
+
+
+# generate_return
+#   - generates function return statement and closing bracket
+#
+# args:
+#   - return_type [string]: return type of the function
+#
+# returns: string containing generated code
+
+def generate_return(return_type):
+    return '}\n' if return_type == 'void' else 'return result;\n}\n'
 
 
 # generate_proxy
@@ -102,7 +220,14 @@ def generate_shared(prefix, is_stub):
 # returns: n/a
 
 def generate_proxy(decls, prefix):
-    print(generate_shared(prefix, False))
+    proxy = generate_shared(prefix, False)
+    for name, attr in decls['functions'].items():
+        proxy += generate_funcheader(name, attr) + ' {\n'
+        for arg in attr['arguments']:
+            unpacked_array = unpack_array(decls['types'], arg, [arg['name']])
+            proxy += unpack_send(unpacked_array['elements'])
+        proxy += generate_return(attr['return_type'])
+    print(proxy)
 
 
 # generate_stub
