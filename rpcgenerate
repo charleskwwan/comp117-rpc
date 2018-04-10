@@ -14,6 +14,7 @@
 #   - this program uses python3
 
 import argparse
+import itertools
 import json
 import os
 import re
@@ -234,7 +235,7 @@ def generate_proxy(decls, prefix):
 
 def generate_badfunc(prefix):
     return (
-        'void _badFunction(string funcname) {\n'
+        'void _badFunction(string &funcname) {\n'
         '  int errorCode = -1;\n'
         '  c150debug->printf(\n'
         '    C150RPCDEBUG,\n'
@@ -319,8 +320,30 @@ def generate_argreads(argname, argtype, typedict, n=0):
         return None
 
 
+# generate_dispatch
+#   - generates the dispatch function for a stub that routes function calls
+#
+
+def generate_dispatch(decls, prefix):
+    dispatchstr = 'if (!RPCSTUBSOCKET->eof()) {{\n{}{}}}\n'.format(
+        '} else '.join([ # check for valid func, then call wrapper
+            'if (funcname.compare("' + funcname + '") == 0) {\n_' + funcname + '();\n'
+            for funcname in decls['functions'].keys()
+        ]),
+        '} else {\n_badFunction(funcname);\n}\n' # invalid func, call to badfunc
+    )
+
+    return 'void dispatchFunction() {{\n{}\n{}\n{}}}\n'.format(
+        generate_vardecl('string', 'funcname') + ';',
+        'readString(funcname, 0);\n',
+        dispatchstr,
+    )
+
+
 # generate_stubfunc
-#   - generates a c++ function
+#   - generates a c++ wrapper function over a func's idl declaration
+#   - a wrapper function reads all its arguments off the wire, calls the idl
+#     func, and returns its result
 #
 # args:
 #   - funcname [str]: name of the function to write
@@ -343,14 +366,16 @@ def generate_stubfunc(funcname, decls, prefix):
         for p in funcdict['arguments']
     ]
 
-    # generate line to make call to funcname and return result
-    callstr = 'return {}({});'.format(
+    # generate line to make call to func, and write the results to socket
+    callstr = '{} = {}({});\n'.format(
+        generate_vardecl(funcdict['return_type'], 'res'), # var decl to save
         funcname,
         ', '.join([p['name'] for p in funcdict['arguments']]) # args
     )
+    # need to add write to socket line, (void)res temp
+    callstr += '(void)res;\n'
 
-    return '{} _{}(){{\n{}\n{}\n}}\n'.format(
-        funcdict['return_type'], 
+    return 'void _{}(){{\n{}\n{}}}\n'.format(
         funcname,
         '\n'.join(argstrs), # arg declarations and reads
         callstr,
@@ -368,14 +393,17 @@ def generate_stubfunc(funcname, decls, prefix):
 # returns: n/a
 
 def generate_stub(decls, prefix):
+    stubfuncs = ''.join([
+        generate_stubfunc(funcname, decls, prefix)
+        for funcname in decls['functions'].keys()
+    ])
+
     stub_content = [
         generate_shared(prefix, True), # shared with proxy
         generate_badfunc(prefix),
+        stubfuncs,
+        generate_dispatch(decls, prefix),
     ]
-
-    # add functions to stub content
-    for funcname in decls['functions']:
-        stub_content.append(generate_stubfunc(funcname, decls, prefix))
 
     with open(prefix + '.stub.cpp', 'w+') as f:
         f.write('\n'.join(stub_content))
