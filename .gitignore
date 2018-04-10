@@ -98,3 +98,8 @@ venv.bak/
 
 # Executables
 idl_to_json
+
+# stubs/proxies
+*.stub.cpp
+*.proxy.cpp
+*.idl
