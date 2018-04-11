@@ -10,7 +10,7 @@
 
 // define debug file, can be set by compiler
 #ifndef _DEBUG_FILE_
-#define _DEBUG_FILE_ "rpcclientdebug.txt"
+#define _DEBUG_FILE_ NULL
 #endif
 
 // INSERT HERE: idl file include
@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
     }
 
     // debugging
-    uint32_t debugClasses = C150APPLICATION;
+    uint32_t debugClasses = C150APPLICATION | C150RPCDEBUG;
     initDebugLog(_DEBUG_FILE_, argv[0], debugClasses);
 
     try {

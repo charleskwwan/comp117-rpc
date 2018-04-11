@@ -8,6 +8,7 @@
 #ifndef _STREAMBUFFER_H_
 #define _STREAMBUFFER_H_
 
+#include <iostream>
 #include <cstring>
 #include <string>
 #include <sstream>
@@ -23,11 +24,10 @@ class StreamBuffer {
 private:
     char *buf;
     size_t buflen;
-    C150StreamSocket *sock;
 
-    void init(C150StreamSocket *_sock, const char *_buf, size_t _buflen) {
-        sock = _sock;
-        setBuffer(_buf, _buflen);
+    void init() {
+        buf = NULL;
+        buflen = 0;
     }
 
     void clearBuffer() {
@@ -38,7 +38,7 @@ private:
         }
     }
 
-    void readUntilNull() {
+    void readUntilNull(C150StreamSocket *sock) {
         vector<char> tmp;
         char lastRead;
 
@@ -57,15 +57,22 @@ private:
         buflen = tmp.size();
         buf = new char[buflen];
         memcpy(buf, &tmp[0], buflen);
+
+        c150debug->printf(
+            C150APPLICATION,
+            "streambuffer.read: read %d bytes, including null term",
+            buflen
+        );
     }
 
 public:
-    StreamBuffer(C150StreamSocket *_sock) {
-        init(_sock, NULL, 0);
+    StreamBuffer() {
+        init();
     }
 
-    StreamBuffer(C150StreamSocket *_sock, const char *_buf, size_t _buflen) {
-        init(_sock, _buf, _buflen);
+    StreamBuffer(const char *_buf, size_t _buflen) {
+        init();
+        setBuffer(_buf, _buflen);
     }
 
     ~StreamBuffer() {
@@ -81,10 +88,13 @@ public:
     }
 
     void setBuffer(const char *_buf, size_t _buflen) {
+        clearBuffer();
         buflen = _buflen;
+
         if (_buf == NULL || buflen == 0) {
             buf = NULL;
         } else {
+            buf = new char[buflen];
             memcpy(buf, _buf, buflen);
         }
     }
@@ -95,20 +105,25 @@ public:
     //    bytes read
     //  - if !lenToRead bytes read, exception is thrown, but existing buf is
     //    not overwritten
-    void read(ssize_t lenToRead) {
+    void read(C150StreamSocket *sock, ssize_t lenToRead) {
         if (lenToRead == 0) {
-            readUntilNull();
+            readUntilNull(sock);
             return;
         }
 
-        char *tmp = new char[lenToRead + 1];
+        char *tmp = new char[lenToRead];
         ssize_t readlen = sock->read(tmp, lenToRead);
-        tmp[lenToRead] = '\0'; // guarantee null termination
 
         if (readlen == lenToRead) {
             clearBuffer();
             buf = tmp;
             buflen = readlen;
+
+            c150debug->printf(
+                C150APPLICATION,
+                "streambuffer.read: read exactly %d bytes, as expected",
+                readlen
+            );
         } else {
             delete [] tmp;
 
@@ -120,9 +135,15 @@ public:
     }
 
     // writes the current buf to sock
-    void write() {
-        if (buflen > 0)
+    void write(C150StreamSocket *sock) {
+        if (buflen > 0) {
+            c150debug->printf(
+                C150APPLICATION,
+                "streambuffer.write: writing %d bytes",
+                buflen
+            );
             sock->write(buf, buflen);
+        }
     }
 };
 

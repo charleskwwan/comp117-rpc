@@ -40,6 +40,8 @@ def generate_funcproxy(funcname, funcsdict, typesdict):
 
     return '\n'.join([
         utils.generate_funcheader(funcname, funcdict) + '{',
+        'string funcname = "{}";'.format(funcname),
+        'writeString(RPCPROXYSOCKET, funcname);\n',
         '\n'.join(argstrs),
         rescodestr,
         utils.generate_vardecl(returntype, 'res') + ';',

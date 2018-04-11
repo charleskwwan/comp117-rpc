@@ -38,6 +38,7 @@ CPPFLAGS = -g -Wall -Werror -I$(C150IDSRPC) -I$(C150LIB)
 
 LDFLAGS = 
 INCLUDES = $(C150LIB)c150streamsocket.h $(C150LIB)c150network.h $(C150LIB)c150exceptions.h $(C150LIB)c150debug.h $(C150LIB)c150utility.h $(C150LIB)c150grading.h $(C150IDSRPC)IDLToken.h $(C150IDSRPC)tokenizeddeclarations.h  $(C150IDSRPC)tokenizeddeclaration.h $(C150IDSRPC)declarations.h $(C150IDSRPC)declaration.h $(C150IDSRPC)functiondeclaration.h $(C150IDSRPC)typedeclaration.h $(C150IDSRPC)arg_or_member_declaration.h
+SHAREDSRC = rpcutils.o
 
 all: pingstreamclient pingstreamserver idldeclarationtst simplefunctionclient simplefunctionserver idl_to_json
 
@@ -117,12 +118,12 @@ simplefunctionserver: simplefunction.stub.o rpcserver.o rpcstubhelper.o simplefu
 ########################################################################
 
 # Compile / link any client executable: 
-%client: %.o %.proxy.o rpcproxyhelper.o %client.o
-	$(CPP) -o $@ $@.o rpcproxyhelper.o $*.proxy.o  $(C150AR) $(C150IDSRPCAR) 
+%client: %.o %.proxy.o rpcproxyhelper.o %client.o $(SHAREDSRC)
+	$(CPP) -o $@ $@.o rpcproxyhelper.o $*.proxy.o  $(SHAREDSRC) $(C150AR) $(C150IDSRPCAR)
 
 # Compile / link any server executable:
-%server: %.o %.stub.o rpcserver.o rpcstubhelper.o
-	$(CPP) -o $@ rpcserver.o $*.stub.o $*.o rpcstubhelper.o $(C150AR) $(C150IDSRPCAR) 
+%server: %.o %.stub.o rpcserver.o rpcstubhelper.o $(SHAREDSRC)
+	$(CPP) -o $@ rpcserver.o $*.stub.o $*.o rpcstubhelper.o $(SHAREDSRC) $(C150AR) $(C150IDSRPCAR) 
 
 
 
