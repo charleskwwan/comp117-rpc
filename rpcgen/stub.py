@@ -39,10 +39,10 @@ def generate_funcstub(funcname, funcsdict, typesdict):
     )
 
     return '\n'.join([
-        'void {}(const FuncHeader &hdr) {{'.format(funcname),
+        'void _{}(const FuncHeader &hdr) {{'.format(funcname),
         '\n'.join(argstrs), # arg declarations and reads
         callstr,
-        'writeStatusCode(RPCSTUBCSOCKET, success);',
+        'writeResultCode(RPCSTUBSOCKET, success);',
         shared.generate_varwrites('res', returntype, typesdict, True),
         '}\n',
     ])
@@ -61,7 +61,7 @@ def generate_dispatch(funcsdict, prefix):
     # function's unique stub/wrapper
     funcstr = '\n    '.join([
         'if (hdr.funcname.compare("{0}") == 0 &&',
-        '    hdr.argsSizes.sizes() == {1}) {{',
+        '    hdr.argsSizes.size() == {1}) {{',
         '  _{0}(hdr);',
         '}}',
     ])
@@ -81,7 +81,8 @@ def generate_dispatch(funcsdict, prefix):
         '      for (size_t i = 0; i < hdr.argsSizes.size(); i++) {',
         '        readString(RPCSTUBSOCKET, hdr.argsSizes[i]);',
         '      }',
-        '      writeStatusCode(RPCSTUBSOCKET, nonexistent_function);',
+        '      writeResultCode(RPCSTUBSOCKET, nonexistent_function);',
         '    }',
-        '  }\n'
+        '  }',
+        '}\n',
     ])

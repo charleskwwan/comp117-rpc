@@ -143,25 +143,26 @@ void writeFuncHeader(C150StreamSocket *sock, const FuncHeader &hdr) {
 }
 
 
-// readStatusCode
+// readResultCode
 //  - reads a status code from a stream socket
 //  - a debug message is printed to match the success/failure nature of the code
 
-ResultCode readStatusCode(C150StreamSocket *sock) {
-    ResultCode code = readInt(sock, code);
+ResultCode readResultCode(C150StreamSocket *sock) {
+    ResultCode code = (ResultCode)readInt(sock);
     c150debug->printf(
         C150RPCDEBUG,
         "rpcutils: status code %d received, indicating %s",
         code, code < 0 ? "failure" : "success"
     );
+    return code;
 }
 
 
-// writeStatusCode
+// writeResultCode
 //  - writes a status code to a stream socket
 //  - a debug message is printed to match the success/failure nature of the code
 
-void writeStatusCode(C150StreamSocket *sock, ResultCode code) {
+void writeResultCode(C150StreamSocket *sock, ResultCode code) {
     c150debug->printf(
         C150RPCDEBUG,
         "rpcutils: status code %d sent, indicating %s",
