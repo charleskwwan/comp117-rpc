@@ -5,9 +5,9 @@
 // by: Justin Jo and Charles Wan
 
 
+#include <string>
+#include <sstream>
 #include "c150streamsocket.h"
-#include "funcheader.h"
-#include "streambuffer.h"
 #include "rpcutils.h"
 
 using namespace std;
@@ -38,162 +38,107 @@ void initDebugLog(const char *logname, const char *progname, uint32_t classes) {
 }
 
 
-// readInt
-//  - uses a StreamBuffer to read an int from a stream socket
+// readAndCheck
+//  - reads lenToRead number of bytes from sock, and returns a status code based
+//    on whether or not the bytes were successfully read
+//
+//  returns:
+//      - success, exact bytes receive
+//      - incomplete_bytes, wrong number of bytes read
 
-int readInt(C150StreamSocket *sock) {
-    StreamBuffer buf;
-    buf.read(sock, 4);
-    int n = *(int *)buf.c_str();
+StatusCode readAndCheck(C150StreamSocket *sock, char *buf, ssize_t lenToRead) {
+    ssize_t readlen = sock->read(buf, lenToRead);
 
-    c150debug->printf(
-        C150APPLICATION,
-        "rpcutils.readInt: read int %d", n
-    );
+    if (readlen == lenToRead) {
+        c150debug->printf(
+            C150APPLICATION,
+            "rpcutils.readAndCheck: read exactly %d bytes, as expected",
+            readlen
+        );
+        return success;
 
-    return n;
-}
-
-
-// writeInt
-//  - writes an int to a stream socket
-
-void writeInt(C150StreamSocket *sock, int n) {
-    StreamBuffer buf((const char *)&n, 4);
-    c150debug->printf(
-        C150APPLICATION,
-        "rpcutils.writeInt: writing integer %d", n
-    );
-    buf.write(sock);
-}
-
-
-// readFloat
-//  - uses a StreamBuffer to read an float from a stream socket
-
-float readFloat(C150StreamSocket *sock) {
-    StreamBuffer buf;
-    buf.read(sock, 4);
-    int n = *(float *)buf.c_str();
-
-    c150debug->printf(
-        C150APPLICATION,
-        "rpcutils.readFloat: read float %f", n
-    );
-
-    return n;
-}
-
-
-// writeFloat
-//  - writes a float to a stream socket
-
-void writeFloat(C150StreamSocket *sock, float n) {
-    StreamBuffer buf((const char *)&n, 4);
-    c150debug->printf(
-        C150APPLICATION,
-        "rpcutils.writeFloat: writing float %f", n
-    );
-    buf.write(sock);
-}
-
-
-// readString
-//  - uses a StreamBuffer to read a string of a given length from a stream
-//    socket
-//  - strlen should account for the null terminator
-
-string readString(C150StreamSocket *sock, size_t strlen) {
-    StreamBuffer buf;
-    buf.read(sock, strlen);
-
-    c150debug->printf(
-        C150APPLICATION,
-        "rpcutils.readString: read string '%s'", buf.c_str()
-    );
-
-    return string(buf.c_str());
-}
-
-// readString (v2), reads until null terminator found
-string readString(C150StreamSocket *sock) {
-    return readString(sock, 0);
-}
-
-
-// writeString
-//  - writes a string to a stream socket, including the null terminator
-
-void writeString(C150StreamSocket *sock, const string &s) {
-    StreamBuffer buf(s.c_str(), s.length() + 1);
-    c150debug->printf(
-        C150APPLICATION,
-        "rpcutils.writeString: writing string '%s'", s.c_str()
-    );
-    buf.write(sock);
-}
-
-
-// readFuncHeader
-//  - reads a function header from a stream socket
-//  - reads in the following order:
-//      - function name
-//      - number of arguments
-//      - sizes of each argument
-
-void readFuncHeader(C150StreamSocket *sock, FuncHeader &hdr) {
-    hdr.funcname = readString(sock); // read until null
-    int nargs = readInt(sock);
-
-    hdr.argsSizes.clear(); // must empty
-
-    for (int i = 0; i < nargs; i++) {
-        hdr.argsSizes.push_back(readInt(sock));
+    } else {
+        c150debug->printf(
+            C150APPLICATION,
+            "rpcutils.readAndCheck: %d bytes could not be read, got %d "
+            "instead", lenToRead, readlen
+        );
+        return incomplete_bytes;
     }
 }
 
 
-// writeFuncHeader
-//  - writes a function header to a stream socket
-//  - reads in the following order:
-//      - function name
-//      - number of arguments
-//      - sizes of each argument
+// readAndThrow
+//  - reads lenToRead number of bytes from sock, throws if wrong number of bytes
+//    received
 
-void writeFuncHeader(C150StreamSocket *sock, const FuncHeader &hdr) {
-    writeString(sock, hdr.funcname);
-    writeInt(sock, hdr.argsSizes.size()); // number of arguments
-
-    for (size_t i = 0; i < hdr.argsSizes.size(); i++) {
-        writeInt(sock, hdr.argsSizes[i]);
+void readAndThrow(C150StreamSocket *sock, char *buf, ssize_t lenToRead) {
+    if (readAndCheck(sock, buf, lenToRead) != success) {
+        stringstream ss;
+        ss << "rpcutils.readAndCheck: " << lenToRead << " bytes could not be "
+           << "read";
+        throw RPCException(ss.str());
     }
 }
 
 
-// readResultCode
-//  - reads a status code from a stream socket
-//  - a debug message is printed to match the success/failure nature of the code
+// checkArgs
+//  - to be called after all arguments have been extracted from ss
+//  - checks if there were too few or too many arguments byte-wise
+//
+//  note:
+//  - whether or not arg bytes were correctly organized is NOT checked. this can
+//    only be checked during arg parsing
 
-ResultCode readResultCode(C150StreamSocket *sock) {
-    ResultCode code = (ResultCode)readInt(sock);
-    c150debug->printf(
-        C150RPCDEBUG,
-        "rpcutils: status code %d received, indicating %s",
-        code, code < 0 ? "failure" : "success"
-    );
-    return code;
+StatusCode checkArgs(stringstream &ss) {
+    if (ss.rdbuf()->in_avail() != 0) { // too many bytes even though args filled
+        return too_few_args;
+    } else if (ss.eof() && ss.fail()) { // too few bytes, args not fulfilled
+        return too_many_args;
+    } else {
+        return good_args;
+    }
 }
 
 
-// writeResultCode
-//  - writes a status code to a stream socket
-//  - a debug message is printed to match the success/failure nature of the code
+// extractString
+//  - extracts a string from a stringstream
+//  - getline is not sufficient as the delimiter is not enforced on eof
+//  - if no null term found, extractred chars are NOT putback into the stream
+//    and exception is thrown
+//
+//  returns:
+//      - s, extracted string from ss, since null term found
 
-void writeResultCode(C150StreamSocket *sock, ResultCode code) {
-    c150debug->printf(
-        C150RPCDEBUG,
-        "rpcutils: status code %d sent, indicating %s",
-        code, code < 0 ? "failure" : "success"
-    );
-    writeInt(sock, code);
+string extractString(stringstream &ss) {
+    string s;
+    char c;
+
+    do {
+        ss >> c;
+        if (c == EOF) { // premature end
+            throw RPCException(
+                "rpcutils.extractString: Null terminator not found"
+            );
+        } else { // good 
+            s += c;
+        }
+    } while (c != '\0');
+
+    return s;
+}
+
+
+void print_bytes(const void *object, size_t size)
+{
+  // This is for C++; in C just drop the static_cast<>() and assign.
+  const unsigned char * const bytes = static_cast<const unsigned char *>(object);
+  size_t i;
+
+  printf("[ ");
+  for(i = 0; i < size; i++)
+  {
+    printf("%02x ", bytes[i]);
+  }
+  printf("]\n");
 }

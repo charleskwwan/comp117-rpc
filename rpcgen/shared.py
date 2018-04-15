@@ -15,7 +15,6 @@ SHARED_HEADERS = [
     '<string>',
     '<sstream>',
     '"c150debug.h"',
-    '"funcheader.h"',
     '"rpcutils.h"',
 ]
 SHARED_NAMESPACES = [
@@ -24,7 +23,7 @@ SHARED_NAMESPACES = [
 ]
 
 
-# _generate_varhandle
+# generate_varhandle
 #   - for each variable, add a read or write
 #   - for simple types like int/string/float, only 1 r/w is necessary
 #   - for array types, for loop to r/w 1 per element
@@ -36,7 +35,6 @@ SHARED_NAMESPACES = [
 #   - varname [str]: name of variable
 #   - vartype [str]: type of variable, should have an entry in typedict
 #   - typesdict [dict]: dictionary of types
-#   - is_stub [bool]: whether or not code is for the stub
 #   - builtin_formats [dict]: format strings for r/w for builtin types
 #       - must have entries for 'int', 'float' and 'string'
 #   - n [int]: number of recursive calls so far, initialized to 0, should not be
@@ -45,20 +43,15 @@ SHARED_NAMESPACES = [
 #
 # returns [str]: c++ string of var r/w, or None if invalid type found
 
-def _generate_varhandle(
-    varname, vartype, typesdict,
-    is_stub, builtin_formats, n=0,
-):
+def generate_varhandle(varname, vartype, typesdict, builtin_formats, n=0):
     if vartype in typesdict:
         type_of_type = typesdict[vartype]['type_of_type']
     else:
         return None # type not found, invalid
 
     if type_of_type == 'builtin':
-        sock = 'RPC' + ('STUB' if is_stub else 'PROXY') + 'SOCKET'
-
         if vartype in builtin_formats:
-            return builtin_formats[vartype].format(varname, sock)
+            return builtin_formats[vartype].format(varname)
         else:
             return None
 
@@ -70,10 +63,10 @@ def _generate_varhandle(
             0, typesdict[vartype]['element_count'],
         ) + '{\n'
 
-        arrstr += _generate_varhandle(
+        arrstr += generate_varhandle(
             varname + '[' + iterator + ']', # including indexing syntax
             typesdict[vartype]['member_type'], # element type update
-            typesdict, is_stub, builtin_formats, n + 1,
+            typesdict, builtin_formats, n + 1,
         )
 
         return arrstr + '}\n'
@@ -81,10 +74,10 @@ def _generate_varhandle(
     elif type_of_type == 'struct':
         # iterate over each member of the struct and recursively call
         return ''.join([
-            _generate_varhandle(
+            generate_varhandle(
                 varname + '.' + p['name'], # include struct member access
                 p['type'], # member type update
-                typesdict, is_stub, builtin_formats, n + 1,
+                typesdict, builtin_formats, n + 1,
             )
             for p in typesdict[vartype]['members']
         ])
@@ -96,26 +89,26 @@ def _generate_varhandle(
 
 # generate_varreads
 #   - for each variable, add the necessary number of reads to fill the variable
-#     off the wire
+#     from a string stream
 
 # args:
 #   - varname [str]: name of variable
 #   - vartype [str]: type of variable, should have an entry in typedict
 #   - typesdict [dict]: dictionary of types
 #   - is_stub [bool]: whether or not code is for the stub
+#   - streamvar [str]: name of the stream 
 #
 # returns [str]: c++ string of var reads, or None if invalid type found
 
-def generate_varreads(varname, vartype, typesdict, is_stub):
+def generate_varreads(varname, vartype, typesdict, is_stub, streamvar='ss'):
+    sock = 'RPC' + ('STUB' if is_stub else 'PROXY') + 'SOCKET'
     builtin_formats = {
-        'int': '{0} = readInt({1});\n',
-        'float': '{0} = readFloat({1});\n',
-        'string': '{0} = readString({1});\n',
+        # 'int': streamvar +  ' >> {0};\n',
+        'int': streamvar + '.read((char *)&{0}, 4);\n',
+        'float': streamvar + '.read((char *)&{0}, 4);\n',
+        'string': '{0} = extractString(' + streamvar + ');\n',
     }
-    return _generate_varhandle(
-        varname, vartype, typesdict,
-        is_stub, builtin_formats,
-    )
+    return generate_varhandle(varname, vartype, typesdict, builtin_formats)
 
 
 # generate_varwrites
@@ -129,16 +122,32 @@ def generate_varreads(varname, vartype, typesdict, is_stub):
 #
 # returns [str]: c++ string of var reads, or None if invalid type found
 
-def generate_varwrites(varname, vartype, typesdict, is_stub, n=0):
+def generate_varwrites(varname, vartype, typesdict, is_stub):
+    sock = 'RPC' + ('STUB' if is_stub else 'PROXY') + 'SOCKET'
     builtin_formats = {
-        'int': 'writeInt({1}, {0});\n',
-        'float': 'writeFloat({1}, {0});\n',
-        'string': 'writeString({1}, {0});\n',
+        'int': sock + '->write((char *)&{0}, 4);\n',
+        'float': sock + '->write((char *)&{0}, 4);\n',
+        'string': sock + '->write({0}.c_str(), {0}.length() + 1);\n',
     }
-    return _generate_varhandle(
-        varname, vartype, typesdict,
-        is_stub, builtin_formats,
-    )
+    return generate_varhandle(varname, vartype, typesdict, builtin_formats)
+
+
+# generate_varsize
+#   - generates c++ code to calculate the size of a variable
+#
+#   args:
+#   - varname [str]: name of variable
+#   - vartype [str]: type of variable, should have an entry in typedict
+#   - typesdict [dict]: dictionary of types
+#   - argsvar [str]: name of size argument
+
+def generate_varsize(varname, vartype, typesdict, sizevar='sizeVar'):
+    builtin_formats = {
+        'int': sizevar + ' += 4;\n',
+        'float': sizevar + ' += 4;\n',
+        'string': sizevar + ' += {0}.length();\n',
+    }
+    return generate_varhandle(varname, vartype, typesdict, builtin_formats)
 
 
 # generate_incls
