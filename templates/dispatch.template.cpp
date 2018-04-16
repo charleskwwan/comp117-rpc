@@ -9,18 +9,15 @@
 
 void dispatchFunction() {{
 stringstream debugStream;
-StatusCode funcnameCode;
 
 try {{
 // read funcname length then name
-int funcnamelen;
-readAndThrow(RPCSTUBSOCKET, (char *)&funcnamelen, 4);
+int funcnamelen = readInt(RPCSTUBSOCKET);
 char funcname[funcnamelen];
 readAndThrow(RPCSTUBSOCKET, funcname, funcnamelen);
 
 if (funcname[funcnamelen - 1] != '\0') {{ // check funcname null termed
-  funcnameCode = no_null_term_found;
-  RPCSTUBSOCKET->write((char *)&funcnameCode, 4);
+  writeInt(RPCSTUBSOCKET, no_null_term_found);
   throw RPCException("dispatchFunction: Function name not null terminated");
 }}
 
@@ -34,9 +31,7 @@ if (!RPCSTUBSOCKET->eof()) {{
   // nonexisting function requested
   debugStream << "Unknown function " << funcname << "() requested";
   logDebug(debugStream, C150APPLICATION, true);
-
-  funcnameCode = nonexistent_func;
-  RPCSTUBSOCKET->write((char *)&funcnameCode, 4);
+  writeInt(RPCSTUBSOCKET, nonexistent_func);
 }}
 }}
 }} catch (RPCException e) {{

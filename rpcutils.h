@@ -16,6 +16,17 @@ using namespace std;
 using namespace C150NETWORK;
 
 
+// N
+//  - union to help handle endianness problem by allowing type punning
+
+union N {
+    uint32_t u; // for inet ops
+    int i;
+    float f;
+    char c[4]; // for read/write over network
+};
+
+
 // RPCStubException
 //  - Error during rpc proxy/stub functions
 //  - Can be caught and handled by proxy/stub if want to avoid crashing client/
@@ -84,8 +95,15 @@ void printBytes(const unsigned char *buf, size_t buflen);
 StatusCode readAndCheck(C150StreamSocket *sock, char *buf, ssize_t lenToRead);
 void readAndThrow(C150StreamSocket *sock, char *buf, ssize_t lenToRead);
 StatusCode checkArgs(stringstream &ss);
-string extractString(stringstream &ss);
 string debugStatusCode(StatusCode code);
+
+string extractString(stringstream &ss);
+int extractInt(stringstream &ss);
+float extractFloat(stringstream &ss);
+int readInt(C150StreamSocket *sock);
+float readFloat(C150StreamSocket *sock);
+void writeInt(C150StreamSocket *sock, int i);
+void writeFloat(C150StreamSocket *sock, float f);
 
 
 #endif

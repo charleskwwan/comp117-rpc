@@ -133,8 +133,8 @@ def _generate_rw_debug(ty, is_stub, is_read):
 
 def generate_varreads(varname, vartype, typesdict, is_stub, streamvar='ss'):
     builtin_formats = {
-        'int': streamvar + '.read((char *)&{0}, 4);\n',
-        'float': streamvar + '.read((char *)&{0}, 4);\n',
+        'int': '{0} = extractInt(' + streamvar + ');\n',
+        'float': '{0} = extractFloat(' + streamvar + ');\n',
         'string': '{0} = extractString(' + streamvar + ');\n',
     }
     for ty in builtin_formats.keys(): # append debug strings
@@ -158,8 +158,9 @@ def generate_varwrites(varname, vartype, typesdict, is_stub):
     sock = 'RPC' + ('STUB' if is_stub else 'PROXY') + 'SOCKET'
 
     builtin_formats = {
-        'int': sock + '->write((char *)&{0}, 4);\n',
-        'float': sock + '->write((char *)&{0}, 4);\n',
+        # 'int': sock + '->write((char *)&{0}, 4);\n',
+        'int': 'writeInt(' + sock + ', {0});\n',
+        'float': 'writeFloat(' + sock + ', {0});\n',
         'string': sock + '->write({0}.c_str(), {0}.length() + 1);\n',
     }
     for ty in builtin_formats.keys(): # prepend debug strings

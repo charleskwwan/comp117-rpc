@@ -13,8 +13,7 @@ stringstream debugStream;
 debugStream << "Receiving arguments for {funcname}()";
 logDebug(debugStream, C150APPLICATION, true);
 
-int argsSize;
-readAndThrow(RPCSTUBSOCKET, (char *)&argsSize, 4);
+int argsSize = readInt(RPCSTUBSOCKET);
 char argsBytes[argsSize];
 readAndThrow(RPCSTUBSOCKET, argsBytes, argsSize);
 
@@ -33,7 +32,7 @@ argsCode = checkArgs(ss);
 }}
 
 // send args code
-RPCSTUBSOCKET->write((char *)&argsCode, 4);
+writeInt(RPCSTUBSOCKET, argsCode);
 if (argsCode != good_args) {{
   c150debug->printf(C150APPLICATION,
     "stub.{funcname}: Error %d occurred when parsing args",
@@ -53,7 +52,7 @@ logDebug(debugStream, C150APPLICATION, true);
 
 int resSize = 0;
 {resSizeAccumulate}
-RPCSTUBSOCKET->write((char *)&resSize, 4);
+writeInt(RPCSTUBSOCKET, resSize);
 
 {sendRes}
 {% end result %}

@@ -75,8 +75,7 @@ def generate_dispatch(funcsdict, prefix):
         'funcBranches': ' else '.join([
             '\n'.join([
                 'if (strcmp(funcname, "{0}") == 0) {{',
-                '  funcnameCode = existing_func;',
-                '  RPCSTUBSOCKET->write((char *)&funcnameCode, 4);',
+                '  writeInt(RPCSTUBSOCKET, existing_func);',
                 '  _{0}();',
                 '}}',
             ]).format(f)
