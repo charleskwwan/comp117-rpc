@@ -149,3 +149,20 @@ def generate_funccall(funcname, funcargs):
 
 def generate_forloop(iterator, lo, hi):
     return 'for (int {0} = {1}; {0} < {2}; {0}++)'.format(iterator, lo, hi)
+
+
+def replace_template_block(template, blockname, repl=None):   
+    if repl:
+        # if replacement specified, just replace fully
+        return re.sub(
+            r'\{{% begin {0} %\}}\n*[\s\S]*\{{% end {0} %\}}'.format(blockname),
+            repl, template
+        )
+    
+    # if replacement specified, get rid of block specifiers
+    m = re.search(
+        r'\{{% begin {0} %\}}\n*([\s\S]*)\{{% end {0} %\}}\n*'
+            .format(blockname),
+        template,
+    )
+    return template.replace(m.group(), m.groups()[0]) if m else template

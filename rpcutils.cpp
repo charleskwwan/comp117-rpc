@@ -7,6 +7,9 @@
 
 #include <string>
 #include <sstream>
+#include <inttypes.h>
+#include "c150grading.h"
+#include "c150debug.h"
 #include "c150streamsocket.h"
 #include "rpcutils.h"
 
@@ -35,6 +38,19 @@ void initDebugLog(const char *logname, const char *progname, uint32_t classes) {
     c150debug->enableTimestamp();
 
     c150debug->enableLogging(classes);
+}
+
+
+// logDebug
+//  - prints the contents of debugStream to the debug log
+//  - if grade is true, debug string is also printed to grading log
+//  - clears the debugStream after printing
+
+void logDebug(stringstream &debugStream, uint32_t debugClasses, bool grade) {
+    c150debug->printf(debugClasses, debugStream.str().c_str());
+    if (grade) *GRADING << debugStream.str() << endl;
+    debugStream.str(""); // clear debug stream so current debug does not leak
+                         // into next debug
 }
 
 
@@ -101,9 +117,9 @@ void readAndThrow(C150StreamSocket *sock, char *buf, ssize_t lenToRead) {
 
 StatusCode checkArgs(stringstream &ss) {
     if (ss.rdbuf()->in_avail() != 0) { // too many bytes even though args filled
-        return too_few_args;
+        return too_many_bytes;
     } else if (ss.eof() && ss.fail()) { // too few bytes, args not fulfilled
-        return too_many_args;
+        return too_few_bytes;
     } else {
         return good_args;
     }
@@ -135,4 +151,40 @@ string extractString(stringstream &ss) {
     } while (c != '\0');
 
     return s;
+}
+
+
+// debugStatusCode
+//  - returns a debug string for a given status code
+
+string debugStatusCode(StatusCode code) {
+    switch(code) {
+        // general status codes
+        case success:
+            return "Operation was successful";
+        case incomplete_bytes:
+            return "Received unexpected number of bytes";
+        case no_null_term_found:
+            return "No null-terminator received after string contents";
+
+        // function names
+        case existing_func:
+            return "Function requested exists";
+        case nonexistent_func:
+            return "Function requested does not exist";
+
+        // arguments
+        case good_args:
+            return "Arguments received were as expected";
+        case too_many_bytes:
+            return "Too many bytes received, arguments already filled";
+        case too_few_bytes:
+            return "Too few bytes received, not enough to fill arguments";
+        case scrambled_args:
+            return "Argument bytes scrambled";
+
+        // unknown
+        default:
+            return "Unknown status code found";
+    }
 }

@@ -23,6 +23,22 @@ SHARED_NAMESPACES = [
     'C150NETWORK',
 ]
 
+# generate_incls
+#   - generates c++ includes along with namespaces
+#
+#   args:
+#   - headers [list[str]]: list of headers to be included
+#       - headers should be of the form: <...> or "..."
+#   - namespaces [list[str]]: list of namespaces
+#
+#   returns [str]: c++ includes and namespaces
+
+def generate_incls(headers, namespaces):
+    return '{}\n\n{}\n'.format(
+        '\n'.join(['#include ' + h for h in headers]), # includes
+        '\n'.join(['using namespace ' + n + ';' for n in namespaces]), # nspaces
+    )
+
 
 # generate_varhandle
 #   - for each variable, add a read or write
@@ -87,6 +103,17 @@ def generate_varhandle(varname, vartype, typesdict, builtin_formats, n=0):
         return None
 
 
+# generate debug lines for varreads and varwrites below
+def _generate_rw_debug(ty, is_stub, is_read):
+    distobj = 'stub' if is_stub else 'proxy'
+    rw = 'Received' if is_read else 'Sending'
+
+    return '\n'.join([
+        'debugStream << "{}: {} {} \'" << {{0}} << "\' for variable \'{{0}}\'";'
+            .format(distobj, rw, ty),
+        'logDebug(debugStream, VARDEBUG, true);\n',
+    ])
+
 
 # generate_varreads
 #   - for each variable, add the necessary number of reads to fill the variable
@@ -105,24 +132,13 @@ def generate_varhandle(varname, vartype, typesdict, builtin_formats, n=0):
 #   - assumes existence of string stream 'debugStream' for debugging
 
 def generate_varreads(varname, vartype, typesdict, is_stub, streamvar='ss'):
-    sock = 'RPC' + ('STUB' if is_stub else 'PROXY') + 'SOCKET'
-    distobj = 'stub' if is_stub else 'proxy'
-
     builtin_formats = {
-        ty: '\n'.join([ # int/float
-            streamvar + '.read((char *)&{0}, 4);', # read
-            'c150debug->printf(VARDEBUG,', # debug
-            '  "' + distobj + ': Received {} %{}",'.format(ty, spec),
-            '  {0});\n',
-        ])
-        for ty, spec in [('int', 'd'), ('float', 'f')]
+        'int': streamvar + '.read((char *)&{0}, 4);\n',
+        'float': streamvar + '.read((char *)&{0}, 4);\n',
+        'string': '{0} = extractString(' + streamvar + ');\n',
     }
-    builtin_formats['string'] = '\n'.join([ # for strings
-        '{0} = extractString(' + streamvar + ');', # read
-        'c150debug->printf(VARDEBUG,', # debug
-        '  "' + distobj + ': Received string \'%s\'",',
-        '  {0});\n',  
-    ])
+    for ty in builtin_formats.keys(): # append debug strings
+        builtin_formats[ty] += _generate_rw_debug(ty, is_stub, True)
 
     return generate_varhandle(varname, vartype, typesdict, builtin_formats)
 
@@ -140,23 +156,15 @@ def generate_varreads(varname, vartype, typesdict, is_stub, streamvar='ss'):
 
 def generate_varwrites(varname, vartype, typesdict, is_stub):
     sock = 'RPC' + ('STUB' if is_stub else 'PROXY') + 'SOCKET'
-    distobj = 'stub' if is_stub else 'proxy'
 
     builtin_formats = {
-        ty: '\n'.join([ # int/float
-            'c150debug->printf(VARDEBUG,', # debug
-            '  "' + distobj + ': Sending {} %{}",'.format(ty, spec),
-            '  {0});',
-            sock + '->write((char *)&{0}, 4);\n', # write
-        ])
-        for ty, spec in [('int', 'd'), ('float', 'f')]
+        'int': sock + '->write((char *)&{0}, 4);\n',
+        'float': sock + '->write((char *)&{0}, 4);\n',
+        'string': sock + '->write({0}.c_str(), {0}.length() + 1);\n',
     }
-    builtin_formats['string'] = '\n'.join([ # for strings
-        'c150debug->printf(VARDEBUG,', # debug
-        '  "' + distobj + ': Writing string \'%s\'",',
-        '  {0});',  
-        sock + '->write({0}.c_str(), {0}.length() + 1);\n', # write
-    ])
+    for ty in builtin_formats.keys(): # prepend debug strings
+        debugstr = _generate_rw_debug(ty, is_stub, False)
+        builtin_formats[ty] = debugstr + builtin_formats[ty]
 
     return generate_varhandle(varname, vartype, typesdict, builtin_formats)
 
@@ -177,20 +185,3 @@ def generate_varsize(varname, vartype, typesdict, sizevar='sizeVar'):
         'string': sizevar + ' += {0}.length();\n',
     }
     return generate_varhandle(varname, vartype, typesdict, builtin_formats)
-
-
-# generate_incls
-#   - generates c++ includes along with namespaces
-#
-#   args:
-#   - headers [list[str]]: list of headers to be included
-#       - headers should be of the form: <...> or "..."
-#   - namespaces [list[str]]: list of namespaces
-#
-#   returns [str]: c++ includes and namespaces
-
-def generate_incls(headers, namespaces):
-    return '{}\n\n{}\n'.format(
-        '\n'.join(['#include ' + h for h in headers]), # includes
-        '\n'.join(['using namespace ' + n + ';' for n in namespaces]), # nspaces
-    )

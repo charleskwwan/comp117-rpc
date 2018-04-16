@@ -3,6 +3,7 @@
 // Defines a template for dispatchFunction to be filled in by rpcgenerate
 //  - dispatchFunction is stub exclusive
 //  - leaves Python format strings for where things should be filled out
+//    - e.g. {funcname} 
 //
 // by: Justin Jo and Charles Wan
 
@@ -24,21 +25,15 @@ if (funcname[funcnamelen - 1] != '\0') {{ // check funcname null termed
 }}
 
 // debug for func request
-debugStream << "dispatchFunction: Received function request for "
-            << funcname << "()";
-c150debug->printf(C150APPLICATION, debugStream.str().c_str());
-*GRADING << debugStream.str() << endl;
-debugStream.str("");
+debugStream << "Received function request for " << funcname << "()";
+logDebug(debugStream, C150APPLICATION, true);
 
 // branch to check funcname validity
 if (!RPCSTUBSOCKET->eof()) {{
 {funcBranches} else {{
   // nonexisting function requested
-  debugStream << "dispatchFunction: Unknown function " << funcname
-              << "() requested";
-  c150debug->printf(C150APPLICATION, debugStream.str().c_str());
-  *GRADING << debugStream.str() << endl;
-  debugStream.str("");
+  debugStream << "Unknown function " << funcname << "() requested";
+  logDebug(debugStream, C150APPLICATION, true);
 
   funcnameCode = nonexistent_func;
   RPCSTUBSOCKET->write((char *)&funcnameCode, 4);

@@ -48,6 +48,10 @@ public:
 };
 
 
+// StatusCode
+//  - used by stub to communicate to proxy whether or not values sent were
+//    accepted or not
+
 enum StatusCode {
     // 000 range - general
     success = 0,
@@ -60,8 +64,8 @@ enum StatusCode {
 
     // 200 range - arguments
     good_args = 200,
-    too_few_args = 201,
-    too_many_args = 202,
+    too_many_bytes = 201,
+    too_few_bytes = 202,
     scrambled_args = 203 // correct number of bytes, badly organized
 
     // 300 range - return values
@@ -74,11 +78,14 @@ const uint32_t VARDEBUG = 0x00000001; // debug flag for variables read/written
 
 // function declarations
 void initDebugLog(const char *logname, const char *progname, uint32_t classes);
+void logDebug(stringstream &debugStream, uint32_t debugClasses, bool grade);
 void printBytes(const unsigned char *buf, size_t buflen);
+
 StatusCode readAndCheck(C150StreamSocket *sock, char *buf, ssize_t lenToRead);
 void readAndThrow(C150StreamSocket *sock, char *buf, ssize_t lenToRead);
 StatusCode checkArgs(stringstream &ss);
 string extractString(stringstream &ss);
+string debugStatusCode(StatusCode code);
 
 
 #endif

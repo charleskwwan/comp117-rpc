@@ -25,8 +25,15 @@ def generate_funcproxy(funcname, funcsdict, typesdict):
     args = funcdict['arguments']
     returntype = funcdict['return_type']
 
+    # if void, replace result block in template with just a return
+    template = utils.replace_template_block(
+        template, 'result',
+        repl=('return;' if returntype == 'void' else None),
+    )
+
     template_formats = {
         'funcname': funcname,
+        'returntype': returntype,
         'funcheader': utils.generate_funcheader(funcname, funcdict),
         'argsSizeAccumulate': ''.join([
             shared.generate_varsize(p['name'], p['type'], typesdict, 'argsSize')
