@@ -14,6 +14,7 @@ SHARED_HEADERS = [
     '<cstring>',
     '<string>',
     '<sstream>',
+    '"c150grading.h"',
     '"c150debug.h"',
     '"rpcutils.h"',
 ]
@@ -99,15 +100,30 @@ def generate_varhandle(varname, vartype, typesdict, builtin_formats, n=0):
 #   - streamvar [str]: name of the stream 
 #
 # returns [str]: c++ string of var reads, or None if invalid type found
+#
+# notes:
+#   - assumes existence of string stream 'debugStream' for debugging
 
 def generate_varreads(varname, vartype, typesdict, is_stub, streamvar='ss'):
     sock = 'RPC' + ('STUB' if is_stub else 'PROXY') + 'SOCKET'
+    distobj = 'stub' if is_stub else 'proxy'
+
     builtin_formats = {
-        # 'int': streamvar +  ' >> {0};\n',
-        'int': streamvar + '.read((char *)&{0}, 4);\n',
-        'float': streamvar + '.read((char *)&{0}, 4);\n',
-        'string': '{0} = extractString(' + streamvar + ');\n',
+        ty: '\n'.join([ # int/float
+            streamvar + '.read((char *)&{0}, 4);', # read
+            'c150debug->printf(VARDEBUG,', # debug
+            '  "' + distobj + ': Received {} %{}",'.format(ty, spec),
+            '  {0});\n',
+        ])
+        for ty, spec in [('int', 'd'), ('float', 'f')]
     }
+    builtin_formats['string'] = '\n'.join([ # for strings
+        '{0} = extractString(' + streamvar + ');', # read
+        'c150debug->printf(VARDEBUG,', # debug
+        '  "' + distobj + ': Received string \'%s\'",',
+        '  {0});\n',  
+    ])
+
     return generate_varhandle(varname, vartype, typesdict, builtin_formats)
 
 
@@ -124,11 +140,24 @@ def generate_varreads(varname, vartype, typesdict, is_stub, streamvar='ss'):
 
 def generate_varwrites(varname, vartype, typesdict, is_stub):
     sock = 'RPC' + ('STUB' if is_stub else 'PROXY') + 'SOCKET'
+    distobj = 'stub' if is_stub else 'proxy'
+
     builtin_formats = {
-        'int': sock + '->write((char *)&{0}, 4);\n',
-        'float': sock + '->write((char *)&{0}, 4);\n',
-        'string': sock + '->write({0}.c_str(), {0}.length() + 1);\n',
+        ty: '\n'.join([ # int/float
+            'c150debug->printf(VARDEBUG,', # debug
+            '  "' + distobj + ': Sending {} %{}",'.format(ty, spec),
+            '  {0});',
+            sock + '->write((char *)&{0}, 4);\n', # write
+        ])
+        for ty, spec in [('int', 'd'), ('float', 'f')]
     }
+    builtin_formats['string'] = '\n'.join([ # for strings
+        'c150debug->printf(VARDEBUG,', # debug
+        '  "' + distobj + ': Writing string \'%s\'",',
+        '  {0});',  
+        sock + '->write({0}.c_str(), {0}.length() + 1);\n', # write
+    ])
+
     return generate_varhandle(varname, vartype, typesdict, builtin_formats)
 
 

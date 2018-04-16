@@ -38,6 +38,20 @@ void initDebugLog(const char *logname, const char *progname, uint32_t classes) {
 }
 
 
+// printBytes
+//  - prints each byte of buf in hex
+//  - format of print: "[ byte1 byte2 byte3 ... ]"
+//      - eg. "[ a8 c9 00 12 ]"
+
+void printBytes(const unsigned char *buf, size_t buflen) {
+  printf("[ ");
+  for(size_t i = 0; i < buflen; i++) {
+    printf("%02x ", buf[i]);
+  }
+  printf("]\n");
+}
+
+
 // readAndCheck
 //  - reads lenToRead number of bytes from sock, and returns a status code based
 //    on whether or not the bytes were successfully read
@@ -50,16 +64,11 @@ StatusCode readAndCheck(C150StreamSocket *sock, char *buf, ssize_t lenToRead) {
     ssize_t readlen = sock->read(buf, lenToRead);
 
     if (readlen == lenToRead) {
-        c150debug->printf(
-            C150APPLICATION,
-            "rpcutils.readAndCheck: read exactly %d bytes, as expected",
-            readlen
-        );
         return success;
 
     } else {
         c150debug->printf(
-            C150APPLICATION,
+            VARDEBUG,
             "rpcutils.readAndCheck: %d bytes could not be read, got %d "
             "instead", lenToRead, readlen
         );
@@ -126,19 +135,4 @@ string extractString(stringstream &ss) {
     } while (c != '\0');
 
     return s;
-}
-
-
-void print_bytes(const void *object, size_t size)
-{
-  // This is for C++; in C just drop the static_cast<>() and assign.
-  const unsigned char * const bytes = static_cast<const unsigned char *>(object);
-  size_t i;
-
-  printf("[ ");
-  for(i = 0; i < size; i++)
-  {
-    printf("%02x ", bytes[i]);
-  }
-  printf("]\n");
 }

@@ -8,6 +8,7 @@
 #define _RPCUTILS_H_
 
 #include <sstream>
+#include <inttypes.h>
 #include "c150streamsocket.h"
 #include "c150exceptions.h"
 
@@ -51,6 +52,7 @@ enum StatusCode {
     // 000 range - general
     success = 0,
     incomplete_bytes = 1, // unexpected number of bytes received
+    no_null_term_found = 2,
 
     // 100 range - function names
     existing_func = 100,
@@ -66,17 +68,17 @@ enum StatusCode {
 };
 
 
-void initDebugLog(const char *logname, const char *progname, uint32_t classes);
+// constants
+const uint32_t VARDEBUG = 0x00000001; // debug flag for variables read/written
 
-// void writeSock(C150StreamSocket *sock, char *)
-// ssize_t readSock(C150StreamSocket *sock, char *buf, ssize_t lenToRead);
+
+// function declarations
+void initDebugLog(const char *logname, const char *progname, uint32_t classes);
+void printBytes(const unsigned char *buf, size_t buflen);
 StatusCode readAndCheck(C150StreamSocket *sock, char *buf, ssize_t lenToRead);
 void readAndThrow(C150StreamSocket *sock, char *buf, ssize_t lenToRead);
 StatusCode checkArgs(stringstream &ss);
 string extractString(stringstream &ss);
-
-
-void print_bytes(const void *object, size_t size);
 
 
 #endif

@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
     }
 
     // debugging
-    uint32_t debugClasses = C150APPLICATION | C150RPCDEBUG;
+    uint32_t debugClasses = C150APPLICATION | C150RPCDEBUG | VARDEBUG;
     initDebugLog(_DEBUG_FILE_, argv[0], debugClasses);
 
     try {

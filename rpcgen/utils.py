@@ -8,6 +8,9 @@ import os
 import re
 
 
+TEMPLATES_DIR = './templates/'
+
+
 # isfile
 #   - returns [bool]:
 #       - true, if file fname exists and is readable
@@ -59,6 +62,18 @@ def get_type_size(ty, typesdict):
             get_type_size(p['type'], typesdict)
             for p in tydict['members']
         ])
+
+
+# load_template
+#   - loads a returns a cpp template from file as a string
+#   - cleans leading comments
+
+def load_template(tmpfile):
+    with open(TEMPLATES_DIR + tmpfile, 'r') as f:
+        template = f.read()
+
+    m = re.match(r'(//.*\n)*\n', template) # remove leading c++ comments
+    return template[len(m.group()):] if m else template
 
 
 # generate_var_decl
