@@ -50,12 +50,11 @@ if (argsCode != good_args) {{
 
 {% begin result %}
 // read result size and result bytes
-int resSize;
-readAndThrow(RPCPROXYSOCKET, (char *)&resSize, 4);
-
 debugStream << "Receiving result for {funcname}()";
 logDebug(debugStream, C150APPLICATION, true);
 
+int resSize;
+readAndThrow(RPCPROXYSOCKET, (char *)&resSize, 4);
 char resBytes[resSize];
 readAndThrow(RPCPROXYSOCKET, resBytes, resSize);
 

@@ -140,12 +140,12 @@ string extractString(stringstream &ss) {
     char c;
 
     do {
-        ss >> c;
+        c = ss.get();
         if (c == EOF) { // premature end
             throw RPCException(
                 "rpcutils.extractString: Null terminator not found"
             );
-        } else { // good 
+        } else if (c != '\0') { // good, no need to add null, auto appended
             s += c;
         }
     } while (c != '\0');

@@ -182,6 +182,6 @@ def generate_varsize(varname, vartype, typesdict, sizevar='sizeVar'):
     builtin_formats = {
         'int': sizevar + ' += 4;\n',
         'float': sizevar + ' += 4;\n',
-        'string': sizevar + ' += {0}.length();\n',
+        'string': sizevar + ' += {0}.length() + 1;\n', # +1 for null
     }
     return generate_varhandle(varname, vartype, typesdict, builtin_formats)
