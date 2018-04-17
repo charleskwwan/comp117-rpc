@@ -39,7 +39,7 @@ def parse_args():
         '--outdir',
         default='.', # default to current directory
         type=str,
-        help='output directory for proxies and stubs',
+        help='output directory for proxies and stubs, defaults to current dir',
     )
 
     args = parser.parse_args()

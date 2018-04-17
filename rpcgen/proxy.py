@@ -32,9 +32,14 @@ def generate_funcproxy(funcname, funcsdict, typesdict):
     )
 
     # if void, replace result block in template with just a return
+    void_return_str = '\n'.join([
+        'debugStream << "Call to {funcname}() complete";',
+        'logDebug(debugStream, C150APPLICATION, true);',
+        'return;',
+    ])
     template = utils.replace_template_block(
         template, 'result',
-        repl=('\nreturn;' if returntype == 'void' else None),
+        repl=(void_return_str if returntype == 'void' else None),
     )
 
     template_formats = {

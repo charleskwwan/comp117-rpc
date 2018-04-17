@@ -34,6 +34,9 @@ if (!RPCSTUBSOCKET->eof()) {{
   writeInt(RPCSTUBSOCKET, nonexistent_func);
 }}
 }}
+
+debugStream << "Function request for " << funcname << "() complete";
+logDebug(debugStream, C150APPLICATION, true);
 }} catch (RPCException e) {{
   // something went wrong with dispatch, but shouldnt end server
   c150debug->printf(C150APPLICATION,

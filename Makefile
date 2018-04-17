@@ -65,7 +65,7 @@ all: idl_to_json
 
 # Compile / link any server executable, which logs to console
 %server-console: %.o %.stub.o rpcstubhelper.o rpcserver.o $(SHAREDSRC)
-	$(CPP) -o $@ $(CPPFLAGS) rpcserver.o $*.stub.o $*.o rpcstubhelper.o $(SHAREDSRC) $(C150AR) $(C150IDSRPCAR)
+	$(CPP) -o $*server $(CPPFLAGS) rpcserver.o $*.stub.o $*.o rpcstubhelper.o $(SHAREDSRC) $(C150AR) $(C150IDSRPCAR)
 
 
 ########################################################################

@@ -23,7 +23,7 @@ writeAndCheck(RPCPROXYSOCKET, funcname.c_str(), funcnamelen);
 StatusCode funcnameCode = (StatusCode)readInt(RPCPROXYSOCKET);;
 if (funcnameCode != existing_func) {{
   debugStream << "proxy.{funcname}: " << debugStatusCode(funcnameCode);
-  c150debug->printf(C150APPLICATION, debugStream.str().c_str());
+  logDebug(debugStream, C150APPLICATION, true);
   throw RPCException(debugStream.str().c_str());
 }}
 {% begin args %}
@@ -41,8 +41,8 @@ logDebug(debugStream, C150APPLICATION, true);
 // read args status code - does server like args?
 StatusCode argsCode = (StatusCode)readInt(RPCPROXYSOCKET);
 if (argsCode != good_args) {{
-  debugStream << "proxy.{funcname}: " <<  debugStatusCode(funcnameCode);
-  c150debug->printf(C150APPLICATION, debugStream.str().c_str());
+  debugStream << "proxy.{funcname}: " <<  debugStatusCode(argsCode);
+  logDebug(debugStream, C150APPLICATION, true);
   throw RPCException(debugStream.str().c_str());
 }}
 {% end args %}
@@ -61,6 +61,9 @@ stringstream ss;
 ss << string(resBytes, resSize);
 {declareResult} // result must be named res
 {readResult}
+debugStream << "Call to {funcname}() complete";
+logDebug(debugStream, C150APPLICATION, true);
+
 return res;
 {% end result %}
 }}

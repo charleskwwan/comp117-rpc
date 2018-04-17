@@ -37,9 +37,8 @@ argsCode = checkArgs(ss);
 // send args code
 writeInt(RPCSTUBSOCKET, argsCode);
 if (argsCode != good_args) {{
-  c150debug->printf(C150APPLICATION,
-    "stub.{funcname}: Error %d occurred when parsing args",
-    argsCode);
+  debugStream << "proxy.{funcname}: " <<  debugStatusCode(argsCode);
+  logDebug(debugStream, C150APPLICATION, true);
   return; // if bad args, stop here
 }}
 
