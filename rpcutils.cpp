@@ -72,23 +72,29 @@ void printBytes(const unsigned char *buf, size_t buflen) {
 // readAndCheck
 //  - reads lenToRead number of bytes from sock, and returns a status code based
 //    on whether or not the bytes were successfully read
+//  - if lenToRead is 0, nothing is written and success is returned
 //
 //  returns:
 //      - success, exact bytes receive
 //      - incomplete_bytes, wrong number of bytes read
+//      - timed_out, if read timed out
 
 StatusCode readAndCheck(C150StreamSocket *sock, char *buf, ssize_t lenToRead) {
+    if (lenToRead == 0) return success;
     ssize_t readlen = sock->read(buf, lenToRead);
 
     if (readlen == lenToRead) {
         return success;
 
+    } else if (sock->timedout()) {
+        c150debug->printf(VARDEBUG, "rpcutils.readAndCheck: Socket timed out");
+        return timed_out;
+
     } else {
-        c150debug->printf(
-            VARDEBUG,
+        c150debug->printf(VARDEBUG,
             "rpcutils.readAndCheck: %d bytes could not be read, got %d "
-            "instead", lenToRead, readlen
-        );
+            "instead",
+            lenToRead, readlen);
         return incomplete_bytes;
     }
 }
@@ -105,6 +111,16 @@ void readAndThrow(C150StreamSocket *sock, char *buf, ssize_t lenToRead) {
            << "read";
         throw RPCException(ss.str());
     }
+}
+
+
+// writeAndCheck
+//  - writes lenToWrite number of bytes to sock
+//  - if lenToWrite = 0, no write is done to avoid premature EOF
+
+void writeAndCheck(C150StreamSocket *sock, const char *buf, ssize_t lenToWrite) {
+    if (lenToWrite == 0) return;
+    sock->write(buf, lenToWrite);
 }
 
 
@@ -258,7 +274,7 @@ float readFloat(C150StreamSocket *sock) {
 void writeInt(C150StreamSocket *sock, int i) {
     union N n = { .i = i };
     n.u = htonl(n.u); // convert to network byte order
-    sock->write(n.c, 4);
+    writeAndCheck(sock, n.c, 4);
 }
 
 
@@ -269,5 +285,5 @@ void writeInt(C150StreamSocket *sock, int i) {
 void writeFloat(C150StreamSocket *sock, float f) {
     union N n = { .f = f };
     n.u = htonl(n.u); // conver to network byte order
-    sock->write(n.c, 4);
+    writeAndCheck(sock, n.c, 4);
 }

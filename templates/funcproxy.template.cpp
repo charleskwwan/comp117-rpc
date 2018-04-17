@@ -17,15 +17,16 @@ debugStream << "Requesting to call {funcname}()"; // log func request
 logDebug(debugStream, C150APPLICATION, true);
 
 writeInt(RPCPROXYSOCKET, funcnamelen);
-RPCPROXYSOCKET->write(funcname.c_str(), funcnamelen);
+writeAndCheck(RPCPROXYSOCKET, funcname.c_str(), funcnamelen);
 
 // read funcname status code - does server know about this func?
 StatusCode funcnameCode = (StatusCode)readInt(RPCPROXYSOCKET);;
 if (funcnameCode != existing_func) {{
-  debugStream << "proxy.{funcname}: " <<  debugStatusCode(funcnameCode);
+  debugStream << "proxy.{funcname}: " << debugStatusCode(funcnameCode);
   c150debug->printf(C150APPLICATION, debugStream.str().c_str());
   throw RPCException(debugStream.str().c_str());
 }}
+{% begin args %}
 
 // send total size of all args
 int argsSize = 0;
@@ -37,7 +38,6 @@ debugStream << "Sending arguments for {funcname}()";
 logDebug(debugStream, C150APPLICATION, true);
 
 {sendArgs}
-
 // read args status code - does server like args?
 StatusCode argsCode = (StatusCode)readInt(RPCPROXYSOCKET);
 if (argsCode != good_args) {{
@@ -45,12 +45,13 @@ if (argsCode != good_args) {{
   c150debug->printf(C150APPLICATION, debugStream.str().c_str());
   throw RPCException(debugStream.str().c_str());
 }}
-
+{% end args %}
 {% begin result %}
-// read result size and result bytes
+
 debugStream << "Receiving result for {funcname}()";
 logDebug(debugStream, C150APPLICATION, true);
 
+// read result size and result bytes
 int resSize = readInt(RPCPROXYSOCKET);
 char resBytes[resSize];
 readAndThrow(RPCPROXYSOCKET, resBytes, resSize);
@@ -60,7 +61,6 @@ stringstream ss;
 ss << string(resBytes, resSize);
 {declareResult} // result must be named res
 {readResult}
-
 return res;
 {% end result %}
 }}

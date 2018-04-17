@@ -34,6 +34,13 @@ def parse_args():
         nargs='+',
         help='an idl file',
     )
+    parser.add_argument(
+        '-d',
+        '--outdir',
+        default='.', # default to current directory
+        type=str,
+        help='output directory for proxies and stubs',
+    )
 
     args = parser.parse_args()
     return args
@@ -67,13 +74,14 @@ def generate_shared(prefix, is_stub):
 
 
 # generate_proxy
-#   - generates proxy code for an idl file and saves it
-#   - proxy file name: <prefix>.proxy.cpp
+#   - generates proxy code for an idl file
 #
 #   args:
 #   - funcsdict [dict]: idl func declarations in json
 #   - typesdict [dict]: idl type declarations in json
 #   - prefix [str]: the prefix of the idl file
+#
+#   returns [str]: proxy file contents
 
 def generate_proxy(funcsdict, typesdict, prefix):
     func_proxies = '\n'.join([
@@ -81,23 +89,21 @@ def generate_proxy(funcsdict, typesdict, prefix):
         for f in funcsdict.keys()
     ])
 
-    proxy_content = [
+    return '\n'.join([
         generate_shared(prefix, False),
         func_proxies,
-    ]
-
-    with open(prefix + '.proxy.cpp', 'w+') as f:
-        f.write('\n'.join(proxy_content))
+    ])
 
 
 # generate_stub
-#   - generates stub code for an idl file and saves it
-#   - stub file name: <prefix>.stub.cpp
+#   - generates stub code for an idl file
 #
 #   args:
 #   - funcsdict [dict]: idl func declarations in json
 #   - typesdict [dict]: idl type declarations in json
 #   - prefix [str]: the prefix of the idl file
+#
+#   returns [str]: stub file contents
 
 def generate_stub(funcsdict, typesdict, prefix):
     func_stubs = '\n'.join([
@@ -105,27 +111,28 @@ def generate_stub(funcsdict, typesdict, prefix):
         for f in funcsdict.keys()
     ])
 
-    stub_content = [
+    return '\n'.join([
         generate_shared(prefix, True),
         func_stubs,
         stub.generate_dispatch(funcsdict, prefix),
-    ]
-
-    with open(prefix + '.stub.cpp', 'w+') as f:
-        f.write('\n'.join(stub_content))
+    ])
 
 
 # generate
 #   - generates and saves a proxy and stub for a given file
 #   - if a file does not exist or cannot be opened, an error message is printed
 #     and the function terminates
+#   - file names:
+#       - proxy file name: <prefix>.proxy.cpp
+#       - stub file name: <prefix>.stub.cpp
 #
 # args:
 #   - fname [str]: fname, must be of the pattern *.idl
+#   - outdir [str]: output directory for proxies and stubs
 #
 # returns: n/a
 
-def generate(fname):
+def generate(fname, outdir='.'):
     if not utils.isfile(fname):
         print("error: '{}' does not exist or could not be opened".format(fname))
         return
@@ -142,8 +149,10 @@ def generate(fname):
     typesdict = decls['types']
 
     # generate files
-    generate_proxy(funcsdict, typesdict, prefix)
-    generate_stub(funcsdict, typesdict, prefix)
+    with open('{}/{}.proxy.cpp'.format(outdir.rstrip('/'), prefix), 'w+') as f:
+        f.write(generate_proxy(funcsdict, typesdict, prefix))
+    with open('{}/{}.stub.cpp'.format(outdir.rstrip('/'), prefix), 'w+') as f:
+        f.write(generate_stub(funcsdict, typesdict, prefix))
 
 
 ##### MAIN
@@ -151,7 +160,7 @@ def generate(fname):
 def main():
     args = parse_args()
     for f in args.idlfiles:
-        generate(f)
+        generate(f, args.outdir)
 
 
 if __name__ == '__main__':

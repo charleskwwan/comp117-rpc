@@ -26,8 +26,8 @@ def isfile(fname):
 #     None is returned
 
 def get_file_prefix(idlfile):
-    m = re.search('(.+).idl', idlfile)
-    return m.group(1) if m else None
+    m = re.match(r'(.+/)*(.+)\.idl', idlfile)
+    return m.group(2) if m else None
 
 
 # clean_type
@@ -40,30 +40,6 @@ def clean_type(ty):
     return m.groups()[0] if m else ty
 
 
-# get_type_size
-#   - calculates the size of a type
-
-def get_type_size(ty, typesdict):
-    tydict = typesdict[ty]
-    type_of_type = tydict['type_of_type']
-
-    if type_of_type == 'builtin':
-        if ty == 'int' or ty == 'float':
-            return 4
-        elif ty == 'string' or ty == 'void':
-            return 0
-
-    elif type_of_type == 'array':
-        return tydict['element_count'] * \
-               get_type_size(tydict['member_type'], typesdict)
-
-    elif type_of_type == 'struct':
-        return sum([
-            get_type_size(p['type'], typesdict)
-            for p in tydict['members']
-        ])
-
-
 # load_template
 #   - loads a returns a cpp template from file as a string
 #   - cleans leading comments
@@ -74,6 +50,37 @@ def load_template(tmpfile):
 
     m = re.match(r'(//.*\n)*\n', template) # remove leading c++ comments
     return template[len(m.group()):] if m else template
+
+
+# replace_template_block
+#   - replaces the FIRST block named blockname in a given template
+#   - blocks are delimited by:
+#       - begin: {% begin <blockname> %}
+#       - end: {% end <blockname> %}
+#
+#   args:
+#   - template [str]: loaded template string
+#   - blockname [str]: name of block, see above for how it is used
+#   - repl [str]: string to replace block with 
+#       - if None, keep the block but remove the tags
+#
+#   returns [str]: template with block replaced
+
+def replace_template_block(template, blockname, repl=None):   
+    if repl != None: # allow repl == '', which is deletion completely
+        # if replacement specified, just replace fully
+        return re.sub(
+            r'\{{% begin {0} %\}}\n*[\s\S]*\{{% end {0} %\}}'.format(blockname),
+            repl, template
+        )
+    
+    # if replacement specified, get rid of block specifiers
+    m = re.search(
+        r'\{{% begin {0} %\}}\n*([\s\S]*)\{{% end {0} %\}}\n*'
+            .format(blockname),
+        template,
+    )
+    return template.replace(m.group(), m.groups()[0]) if m else template
 
 
 # generate_var_decl
@@ -149,20 +156,3 @@ def generate_funccall(funcname, funcargs):
 
 def generate_forloop(iterator, lo, hi):
     return 'for (int {0} = {1}; {0} < {2}; {0}++)'.format(iterator, lo, hi)
-
-
-def replace_template_block(template, blockname, repl=None):   
-    if repl:
-        # if replacement specified, just replace fully
-        return re.sub(
-            r'\{{% begin {0} %\}}\n*[\s\S]*\{{% end {0} %\}}'.format(blockname),
-            repl, template
-        )
-    
-    # if replacement specified, get rid of block specifiers
-    m = re.search(
-        r'\{{% begin {0} %\}}\n*([\s\S]*)\{{% end {0} %\}}\n*'
-            .format(blockname),
-        template,
-    )
-    return template.replace(m.group(), m.groups()[0]) if m else template

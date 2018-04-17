@@ -68,6 +68,7 @@ enum StatusCode {
     success = 0,
     incomplete_bytes = 1, // unexpected number of bytes received
     no_null_term_found = 2,
+    timed_out = 3,
 
     // 100 range - function names
     existing_func = 100,
@@ -94,6 +95,7 @@ void printBytes(const unsigned char *buf, size_t buflen);
 
 StatusCode readAndCheck(C150StreamSocket *sock, char *buf, ssize_t lenToRead);
 void readAndThrow(C150StreamSocket *sock, char *buf, ssize_t lenToRead);
+void writeAndCheck(C150StreamSocket *sock, const char *buf, ssize_t lenToWrite);
 StatusCode checkArgs(stringstream &ss);
 string debugStatusCode(StatusCode code);
 

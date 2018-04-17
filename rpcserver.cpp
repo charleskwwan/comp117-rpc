@@ -61,6 +61,10 @@ void usage(char *progname, int exitCode);
 const int numberOfArgs = 0;
 
 
+// constants
+const int TIMEOUT_DURATION = 1500; // 1.5 seconds, a bit long but safe
+
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 //
 //                           main program
@@ -91,15 +95,20 @@ int main(int argc, char *argv[]) {
             );
             RPCSTUBSOCKET->accept();
 
+            // turn on time outs
+            RPCSTUBSOCKET->turnOnTimeouts(TIMEOUT_DURATION);
+
             // infinite message processing
             while (1) {
                 dispatchFunction();
 
                 if (RPCSTUBSOCKET->eof()) {
-                    c150debug->printf(
-                        C150RPCDEBUG,
-                        "rpcserver: EOF signaled on input"
-                    );
+                    c150debug->printf(C150RPCDEBUG,
+                        "rpcserver: EOF signaled on input");
+                    break;
+                } else if (RPCSTUBSOCKET->timedout()) {
+                    c150debug->printf(C150RPCDEBUG,
+                        "rpcserver: Socket timed out");
                     break;
                 }
             }
@@ -116,8 +125,9 @@ int main(int argc, char *argv[]) {
             "Caught %s",
             e.formattedExplanation().c_str()
         );
-        // in case logging to file, write to console too
-        cerr << argv[0] << ": " << e.formattedExplanation() << endl; 
+        // if logging to file, write to console too
+        if (_DEBUG_FILE_ != NULL)
+            cerr << argv[0] << ": " << e.formattedExplanation() << endl; 
     }
 
     RPCSTUBSOCKET->close(); // just in case

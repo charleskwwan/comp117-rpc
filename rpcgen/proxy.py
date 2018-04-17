@@ -25,10 +25,16 @@ def generate_funcproxy(funcname, funcsdict, typesdict):
     args = funcdict['arguments']
     returntype = funcdict['return_type']
 
+    # if no args, remove args block in template
+    template = utils.replace_template_block(
+        template, 'args',
+        repl=('' if len(args) == 0 else None),
+    )
+
     # if void, replace result block in template with just a return
     template = utils.replace_template_block(
         template, 'result',
-        repl=('return;' if returntype == 'void' else None),
+        repl=('\nreturn;' if returntype == 'void' else None),
     )
 
     template_formats = {

@@ -8,16 +8,19 @@
 
 void _{funcname}() {{
 stringstream debugStream;
+{% begin args %}
 
 // reag args size then all args bytes
-debugStream << "Receiving arguments for {funcname}()";
-logDebug(debugStream, C150APPLICATION, true);
-
 int argsSize = readInt(RPCSTUBSOCKET);
+if (argsSize > 0) {{
+    debugStream << "Receiving arguments for {funcname}()";
+    logDebug(debugStream, C150APPLICATION, true);
+}}
+
 char argsBytes[argsSize];
 readAndThrow(RPCSTUBSOCKET, argsBytes, argsSize);
 
-// use string streawm to deconstruct args bytes into args
+// use string stream to deconstruct args bytes into args
 stringstream ss;
 ss << string(argsBytes, argsSize);
 StatusCode argsCode = good_args; // assume that args are good for now
@@ -40,12 +43,13 @@ if (argsCode != good_args) {{
   return; // if bad args, stop here
 }}
 
+{% end args %}
 // call real func with args
 debugStream << "Calling {funcname}()";
 logDebug(debugStream, C150APPLICATION, true);
 {callFunction} // must declare a result variable res, if return value exists
-
 {% begin result %}
+
 // send result size back then result
 debugStream << "Sending result of call to {funcname}()";
 logDebug(debugStream, C150APPLICATION, true);
@@ -54,6 +58,5 @@ int resSize = 0;
 {resSizeAccumulate}
 writeInt(RPCSTUBSOCKET, resSize);
 
-{sendRes}
-{% end result %}
+{sendRes}{% end result %}
 }}

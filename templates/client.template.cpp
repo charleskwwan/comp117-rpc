@@ -13,7 +13,7 @@
 #define _DEBUG_FILE_ NULL
 #endif
 
-// INSERT HERE: idl file include
+#include <string>
 #include "rpcproxyhelper.h"
 #include "c150debug.h"
 #include "c150grading.h"
@@ -21,6 +21,8 @@
 
 using namespace std;
 using namespace C150NETWORK;
+
+// INSERT HERE: idl file include, need string with namespace above to work
 
 
 // fwd declarations
@@ -63,8 +65,9 @@ int main(int argc, char *argv[]) {
             "Caught %s",
             e.formattedExplanation().c_str()
         );
-        // in case logging to file, write to console too
-        cerr << argv[0] << ": " << e.formattedExplanation() << endl; 
+        // if logging to file, write to console too
+        if (_DEBUG_FILE_ != NULL)
+            cerr << argv[0] << ": " << e.formattedExplanation() << endl; 
     }
 }
 
@@ -81,10 +84,6 @@ int main(int argc, char *argv[]) {
 
 // Prints command line usage to stderr and exits
 void usage(char *progname, int exitCode) {
-    fprintf(
-        stderr,
-        "usage: %s <server> <networknastiness> <filenastiness> <srcdir>\n",
-        progname
-    );
+    fprintf(stderr, "usage: %s <server>\n", progname);
     exit(exitCode);
 }

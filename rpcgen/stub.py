@@ -27,10 +27,16 @@ def generate_funcstub(funcname, funcsdict, typesdict):
     args = funcdict['arguments']
     returntype = funcdict['return_type']
 
+    # if no args remove args block in template
+    template = utils.replace_template_block(
+        template, 'args',
+        repl=('' if len(args) == 0 else None),
+    )
+
     # if void, replace return block in template with just a return
     template = utils.replace_template_block(
         template, 'result',
-        repl=('return;' if returntype == 'void' else None),
+        repl=('\nreturn;' if returntype == 'void' else None),
     )
 
     template_formats = {
@@ -44,18 +50,14 @@ def generate_funcstub(funcname, funcsdict, typesdict):
             shared.generate_varreads(p['name'], p['type'], typesdict, True, 'ss')
             for p in args
         ]),
-        'callFunction': '{}({});'.format(
+        'callFunction': '{}{}({});'.format(
+            '' if returntype == 'void' else (utils.generate_vardecl(returntype, 'res') + ' = '),
             funcname,
             ', '.join(p['name'] for p in args),
         ),
         'resSizeAccumulate': shared.generate_varsize('res', returntype, typesdict, 'resSize'),
         'sendRes': shared.generate_varwrites('res', returntype, typesdict, True),
     }
-
-    # if nonvoid, modify callFunction to save func call result to res variable
-    if returntype != 'void':
-        res_decl = '{} = '.format(utils.generate_vardecl(returntype, 'res'))
-        template_formats['callFunction'] = res_decl + template_formats['callFunction']
 
     return template.format(**template_formats)
 
