@@ -27,7 +27,7 @@ logDebug(debugStream, C150APPLICATION, true);
 
 // branch to check funcname validity
 if (!RPCSTUBSOCKET->eof()) {{
-{funcBranches} else {{
+{% begin branches %}{funcBranches} else {% end branches %}{{
   // nonexisting function requested
   debugStream << "Unknown function " << funcname << "() requested";
   logDebug(debugStream, C150APPLICATION, true);

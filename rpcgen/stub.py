@@ -73,6 +73,11 @@ def generate_funcstub(funcname, funcsdict, typesdict):
 def generate_dispatch(funcsdict, prefix):
     template = utils.load_template(DISPATCH_TEMPLATE)
 
+    template = utils.replace_template_block(
+        template, 'branches',
+        repl=('' if len(funcsdict.keys()) == 0 else None),
+    )
+
     template_formats = {
         'funcBranches': ' else '.join([
             '\n'.join([
