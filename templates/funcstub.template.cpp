@@ -11,12 +11,10 @@ stringstream debugStream;
 {% begin args %}
 
 // reag args size then all args bytes
-int argsSize = readInt(RPCSTUBSOCKET);
-if (argsSize > 0) {{
-    debugStream << "Receiving arguments for {funcname}()";
-    logDebug(debugStream, C150APPLICATION, true);
-}}
+debugStream << "Receiving arguments for {funcname}()";
+logDebug(debugStream, C150APPLICATION, true);
 
+int argsSize = readInt(RPCSTUBSOCKET);
 char argsBytes[argsSize];
 readAndThrow(RPCSTUBSOCKET, argsBytes, argsSize);
 
@@ -38,8 +36,9 @@ argsCode = checkArgs(ss);
 writeInt(RPCSTUBSOCKET, argsCode);
 if (argsCode != good_args) {{
   debugStream << "proxy.{funcname}: " <<  debugStatusCode(argsCode);
+  string debugStr = debugStream.str(); 
   logDebug(debugStream, C150APPLICATION, true);
-  return; // if bad args, stop here
+  throw RPCException(debugStr.c_str()); // if bad args, stop here
 }}
 
 {% end args %}

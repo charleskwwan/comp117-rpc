@@ -30,8 +30,10 @@ if (!RPCSTUBSOCKET->eof()) {{
 {% begin branches %}{funcBranches} else {% end branches %}{{
   // nonexisting function requested
   debugStream << "Unknown function " << funcname << "() requested";
+  string debugStr = debugStream.str();
   logDebug(debugStream, C150APPLICATION, true);
   writeInt(RPCSTUBSOCKET, nonexistent_func);
+  throw RPCException(debugStr.c_str());
 }}
 }}
 

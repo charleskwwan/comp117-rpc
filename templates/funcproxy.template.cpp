@@ -23,8 +23,9 @@ writeAndCheck(RPCPROXYSOCKET, funcname.c_str(), funcnamelen);
 StatusCode funcnameCode = (StatusCode)readInt(RPCPROXYSOCKET);;
 if (funcnameCode != existing_func) {{
   debugStream << "proxy.{funcname}: " << debugStatusCode(funcnameCode);
+  string debugStr = debugStream.str();
   logDebug(debugStream, C150APPLICATION, true);
-  throw RPCException(debugStream.str().c_str());
+  throw RPCException(debugStr.c_str());
 }}
 {% begin args %}
 
@@ -42,8 +43,9 @@ logDebug(debugStream, C150APPLICATION, true);
 StatusCode argsCode = (StatusCode)readInt(RPCPROXYSOCKET);
 if (argsCode != good_args) {{
   debugStream << "proxy.{funcname}: " <<  debugStatusCode(argsCode);
+  string debugStr = debugStream.str();
   logDebug(debugStream, C150APPLICATION, true);
-  throw RPCException(debugStream.str().c_str());
+  throw RPCException(debugStr.c_str());
 }}
 {% end args %}
 {% begin result %}
