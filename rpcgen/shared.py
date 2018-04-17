@@ -160,7 +160,7 @@ def generate_varwrites(varname, vartype, typesdict, is_stub):
     builtin_formats = {
         'int': 'writeInt(' + sock + ', {0});\n',
         'float': 'writeFloat(' + sock + ', {0});\n',
-        'string': 'writeAndCheck(' + sock + ', {0}.c_str(), {0}.length() + 1);\n',
+        'string': 'writeString(' + sock + ', {0});\n',
     }
     for ty in builtin_formats.keys(): # prepend debug strings
         debugstr = _generate_rw_debug(ty, is_stub, False)

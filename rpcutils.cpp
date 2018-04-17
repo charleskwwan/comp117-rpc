@@ -205,21 +205,12 @@ string debugStatusCode(StatusCode code) {
 //      - s, extracted string from ss, since null term found
 
 string extractString(stringstream &ss) {
-    string s;
-    char c;
+    int len = extractInt(ss);
+    char buf[len];
 
-    do {
-        c = ss.get();
-        if (c == EOF) { // premature end
-            throw RPCException(
-                "rpcutils.extractString: Null terminator not found"
-            );
-        } else if (c != '\0') { // good, no need to add null, auto appended
-            s += c;
-        }
-    } while (c != '\0');
+    ss.read(buf, len);
 
-    return s;
+    return string(buf);
 }
 
 
@@ -300,4 +291,13 @@ void writeFloat(C150StreamSocket *sock, float f) {
     union N n = { .f = f };
     n.u = htonl(n.u); // conver to network byte order
     writeAndCheck(sock, n.c, 4);
+}
+
+
+// writeString
+//  - writes length of string and string to sock
+//  - lenToWrite can't be 0 for string, must at least have null terminator
+void writeString(C150StreamSocket *sock, const string &s) {
+    writeInt(sock, s.length() + 1); // include null terminator
+    writeAndCheck(sock, s.c_str(), s.length() + 1)
 }

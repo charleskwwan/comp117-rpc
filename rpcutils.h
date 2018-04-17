@@ -106,6 +106,6 @@ int readInt(C150StreamSocket *sock);
 float readFloat(C150StreamSocket *sock);
 void writeInt(C150StreamSocket *sock, int i);
 void writeFloat(C150StreamSocket *sock, float f);
-
+void writeString(C150StreamSocket *sock, const string &s);
 
 #endif
