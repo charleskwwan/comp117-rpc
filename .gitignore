@@ -107,5 +107,6 @@ idl_to_json
 *.idl
 *client.cpp
 
-# gradelogs
+# logs
 GRADELOG.*
+*debug.txt

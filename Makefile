@@ -26,7 +26,6 @@ C150IDSRPC = $(COMP117)/files/RPC.framework/
 C150IDSRPCAR = $(C150IDSRPC)c150idsrpc.a
 
 CPPFLAGS = -g -Wall -Werror -I$(C150IDSRPC) -I$(C150LIB)
-# CPPFLAGS = -g -Wall -Werror  -I$(C150LIB)
 
 
 LDFLAGS = 
@@ -58,12 +57,15 @@ all: idl_to_json
 
 # Compile / link any client executable: 
 %client: %.o %.proxy.o rpcproxyhelper.o %client.o $(SHAREDSRC)
-	$(CPP) -o $@ $@.o rpcproxyhelper.o $*.proxy.o  $(SHAREDSRC) $(C150AR) $(C150IDSRPCAR)
+	$(CPP) -o $@ $(CPPFLAGS) $@.o rpcproxyhelper.o $*.proxy.o  $(SHAREDSRC) $(C150AR) $(C150IDSRPCAR)
 
-# Compile / link any server executable:
+# Compile / link any server executable, which logs to file
 %server: %.o %.stub.o rpcstubhelper.o rpcserver.o $(SHAREDSRC)
-	$(CPP) -o $@ rpcserver.o $*.stub.o $*.o rpcstubhelper.o $(SHAREDSRC) $(C150AR) $(C150IDSRPCAR) 
+	$(CPP) -o $@ $(CPPFLAGS) rpcserver.cpp $*.stub.o $*.o rpcstubhelper.o $(SHAREDSRC) $(C150AR) $(C150IDSRPCAR) -D_DEBUG_FILE_=\"$@debug\.txt\"
 
+# Compile / link any server executable, which logs to console
+%server-console: %.o %.stub.o rpcstubhelper.o rpcserver.o $(SHAREDSRC)
+	$(CPP) -o $@ $(CPPFLAGS) rpcserver.o $*.stub.o $*.o rpcstubhelper.o $(SHAREDSRC) $(C150AR) $(C150IDSRPCAR)
 
 
 ########################################################################
@@ -104,7 +106,7 @@ all: idl_to_json
 ########################################################################
 
 idl_to_json: idl_to_json.o $(C150AR) $(C150IDSRPCAR)  $(INCLUDES)
-	$(CPP) -o idl_to_json idl_to_json.o $(C150AR) $(C150IDSRPCAR) 
+	$(CPP) -o idl_to_json $(CPPFLAGS) idl_to_json.o $(C150AR) $(C150IDSRPCAR) 
 
 
 ########################################################################
@@ -132,7 +134,7 @@ idl_to_json: idl_to_json.o $(C150AR) $(C150IDSRPCAR)  $(INCLUDES)
 # make .o from .cpp
 
 %.o:%.cpp  $(INCLUDES)
-	$(CPP) -c  $(CPPFLAGS) $< 
+	$(CPP) -c $(CPPFLAGS) $< 
 
 
 
