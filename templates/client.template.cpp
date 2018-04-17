@@ -13,6 +13,8 @@
 #define _DEBUG_FILE_ NULL
 #endif
 
+#include <cstdio>
+#include <iostream>
 #include <string>
 #include "rpcproxyhelper.h"
 #include "c150debug.h"

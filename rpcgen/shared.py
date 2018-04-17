@@ -111,7 +111,7 @@ def _generate_rw_debug(ty, is_stub, is_read):
     return '\n'.join([
         'debugStream << "{}: {} {} \'" << {{0}} << "\' for variable \'{{0}}\'";'
             .format(distobj, rw, ty),
-        'logDebug(debugStream, VARDEBUG, true);\n',
+        'logDebug(debugStream, VARDEBUG, false);\n',
     ])
 
 

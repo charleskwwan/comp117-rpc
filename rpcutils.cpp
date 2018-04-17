@@ -78,17 +78,31 @@ void printBytes(const unsigned char *buf, size_t buflen) {
 //      - success, exact bytes receive
 //      - incomplete_bytes, wrong number of bytes read
 //      - timed_out, if read timed out
+//
+//  notes:
+//      - testing found that if a large number of bytes are expected, the socket
+//        will not necessarily deliver all of it at once. it is a stream after
+//        all.
+//          - solution: loop and read until we get all the bytes we want OR
+//            there are no more bytes left, which is a problem
 
 StatusCode readAndCheck(C150StreamSocket *sock, char *buf, ssize_t lenToRead) {
     if (lenToRead == 0) return success;
-    ssize_t readlen = sock->read(buf, lenToRead);
+    ssize_t readlen, totalRead = 0;
 
-    if (readlen == lenToRead) {
+    // loop and read until lenToRead bytes filled or no bytes available
+    do {
+        readlen = sock->read(buf + totalRead, lenToRead - totalRead);
+        totalRead += readlen;
+
+        if (sock->timedout()) {
+            c150debug->printf(VARDEBUG, "rpcutils.readAndCheck: Socket timed out");
+            return timed_out;
+        }
+    } while (totalRead < lenToRead && readlen > 0);
+
+    if (totalRead == lenToRead) {
         return success;
-
-    } else if (sock->timedout()) {
-        c150debug->printf(VARDEBUG, "rpcutils.readAndCheck: Socket timed out");
-        return timed_out;
 
     } else {
         c150debug->printf(VARDEBUG,
