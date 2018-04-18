@@ -11,6 +11,7 @@ import utils
 # constants
 SHARED_HEADERS = [
     '<cstdio>',
+    '<iostream>',
     '<cstring>',
     '<string>',
     '<sstream>',
@@ -109,8 +110,12 @@ def _generate_rw_debug(ty, is_stub, is_read):
     rw = 'Received' if is_read else 'Sending'
 
     return '\n'.join([
-        'debugStream << "{}: {} {} \'" << {{0}} << "\' for variable \'{{0}}\'";'
-            .format(distobj, rw, ty),
+        'debugStream << "{}: {} {} {}size=" << {} << " for variable \'{{0}}\'";'
+            .format(
+                distobj, rw, ty,
+                '' if ty == 'string' else '\'" << {0} << "\' ',
+                '{0}.length() + 1' if ty == 'string' else 4, # int/float size=4
+            ),
         'logDebug(debugStream, VARDEBUG, false);\n',
     ])
 
@@ -182,6 +187,6 @@ def generate_varsize(varname, vartype, typesdict, sizevar='sizeVar'):
     builtin_formats = {
         'int': sizevar + ' += 4;\n',
         'float': sizevar + ' += 4;\n',
-        'string': sizevar + ' += {0}.length() + 1;\n', # +1 for null
+        'string': sizevar + ' += {0}.length() + 5;\n', # +1 for null, +4 for string size
     }
     return generate_varhandle(varname, vartype, typesdict, builtin_formats)

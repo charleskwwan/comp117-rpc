@@ -70,13 +70,13 @@ def replace_template_block(template, blockname, repl=None):
     if repl != None: # allow repl == '', which is deletion completely
         # if replacement specified, just replace fully
         return re.sub(
-            r'\{{% begin {0} %\}}\n*[\s\S]*\{{% end {0} %\}}'.format(blockname),
+            r'\{{% begin {0} %\}}\n{{0,1}}[\s\S]*\{{% end {0} %\}}'.format(blockname),
             repl, template
         )
     
     # if replacement specified, get rid of block specifiers
     m = re.search(
-        r'\{{% begin {0} %\}}\n*([\s\S]*)\{{% end {0} %\}}\n*'
+        r'\{{% begin {0} %\}}\n{{0,1}}([\s\S]*)\{{% end {0} %\}}\n*'
             .format(blockname),
         template,
     )

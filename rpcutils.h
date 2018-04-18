@@ -74,13 +74,11 @@ enum StatusCode {
     existing_func = 100,
     nonexistent_func = 101,
 
-    // 200 range - arguments
-    good_args = 200,
+    // 200 range - arguments/results
+    good_bytes = 200,
     too_many_bytes = 201,
     too_few_bytes = 202,
-    scrambled_args = 203 // correct number of bytes, badly organized
-
-    // 300 range - return values
+    scrambled_bytes = 203 // correct number of bytes, badly organized
 };
 
 
@@ -91,17 +89,18 @@ const uint32_t VARDEBUG = 0x00000001; // debug flag for variables read/written
 // function declarations
 void initDebugLog(const char *logname, const char *progname, uint32_t classes);
 void logDebug(stringstream &debugStream, uint32_t debugClasses, bool grade);
+void logThrow(stringstream &debugStream, uint32_t debugClasses, bool grade);
 void printBytes(const unsigned char *buf, size_t buflen);
 
 StatusCode readAndCheck(C150StreamSocket *sock, char *buf, ssize_t lenToRead);
 void readAndThrow(C150StreamSocket *sock, char *buf, ssize_t lenToRead);
 void writeAndCheck(C150StreamSocket *sock, const char *buf, ssize_t lenToWrite);
-StatusCode checkArgs(stringstream &ss);
+StatusCode checkBytes(stringstream &ss);
 string debugStatusCode(StatusCode code);
 
-string extractString(stringstream &ss);
 int extractInt(stringstream &ss);
 float extractFloat(stringstream &ss);
+string extractString(stringstream &ss);
 int readInt(C150StreamSocket *sock);
 float readFloat(C150StreamSocket *sock);
 void writeInt(C150StreamSocket *sock, int i);

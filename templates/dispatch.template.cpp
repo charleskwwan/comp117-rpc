@@ -10,6 +10,7 @@
 void dispatchFunction() {{
 stringstream debugStream;
 
+if (!RPCSTUBSOCKET->eof()) {{
 try {{
 // read funcname length then name
 int funcnamelen = readInt(RPCSTUBSOCKET);
@@ -26,15 +27,11 @@ debugStream << "Received function request for " << funcname << "()";
 logDebug(debugStream, C150APPLICATION, true);
 
 // branch to check funcname validity
-if (!RPCSTUBSOCKET->eof()) {{
 {% begin branches %}{funcBranches} else {% end branches %}{{
   // nonexisting function requested
   debugStream << "Unknown function " << funcname << "() requested";
-  string debugStr = debugStream.str();
-  logDebug(debugStream, C150APPLICATION, true);
   writeInt(RPCSTUBSOCKET, nonexistent_func);
-  throw RPCException(debugStr.c_str());
-}}
+  logThrow(debugStream, C150APPLICATION, true);
 }}
 
 debugStream << "Function request for " << funcname << "() complete";
@@ -44,5 +41,6 @@ logDebug(debugStream, C150APPLICATION, true);
   c150debug->printf(C150APPLICATION,
     "Caught %s",
     e.formattedExplanation().c_str());
+}}
 }}
 }}

@@ -55,6 +55,14 @@ void logDebug(stringstream &debugStream, uint32_t debugClasses, bool grade) {
 }
 
 
+// same as logDebug, but throw an exception as well after logging
+void logThrow(stringstream &debugStream, uint32_t debugClasses, bool grade) {
+    string debugStr = debugStream.str();
+    logDebug(debugStream, debugClasses, grade);
+    throw RPCException(debugStr.c_str());
+}
+
+
 // printBytes
 //  - prints each byte of buf in hex
 //  - format of print: "[ byte1 byte2 byte3 ... ]"
@@ -138,21 +146,21 @@ void writeAndCheck(C150StreamSocket *sock, const char *buf, ssize_t lenToWrite) 
 }
 
 
-// checkArgs
-//  - to be called after all arguments have been extracted from ss
-//  - checks if there were too few or too many arguments byte-wise
+// checkBytes
+//  - to be called after all bytes have been extracted from ss
+//  - checks if there were too few or too many bytes to fill args/result
 //
 //  note:
-//  - whether or not arg bytes were correctly organized is NOT checked. this can
-//    only be checked during arg parsing
+//  - whether or not val bytes were correctly organized is NOT checked. this can
+//    only be checked during value parsing
 
-StatusCode checkArgs(stringstream &ss) {
+StatusCode checkBytes(stringstream &ss) {
     if (ss.rdbuf()->in_avail() != 0) { // too many bytes even though args filled
         return too_many_bytes;
     } else if (ss.eof() && ss.fail()) { // too few bytes, args not fulfilled
         return too_few_bytes;
     } else {
-        return good_args;
+        return good_bytes;
     }
 }
 
@@ -176,15 +184,15 @@ string debugStatusCode(StatusCode code) {
         case nonexistent_func:
             return "Function requested does not exist";
 
-        // arguments
-        case good_args:
-            return "Arguments received were as expected";
+        // arguments/results
+        case good_bytes:
+            return "Value bytes received were as expected";
         case too_many_bytes:
-            return "Too many bytes received, arguments already filled";
+            return "Too many bytes received, values already filled";
         case too_few_bytes:
-            return "Too few bytes received, not enough to fill arguments";
-        case scrambled_args:
-            return "Argument bytes scrambled";
+            return "Too few bytes received, not enough to fill values";
+        case scrambled_bytes:
+            return "Value bytes scrambled";
 
         // unknown
         default:
@@ -192,25 +200,6 @@ string debugStatusCode(StatusCode code) {
             ss << "Unknown code=" << code << " found";
             return ss.str();
     }
-}
-
-
-// extractString
-//  - extracts a string from a stringstream
-//  - getline is not sufficient as the delimiter is not enforced on eof
-//  - if no null term found, extractred chars are NOT putback into the stream
-//    and exception is thrown
-//
-//  returns:
-//      - s, extracted string from ss, since null term found
-
-string extractString(stringstream &ss) {
-    int len = extractInt(ss);
-    char buf[len];
-
-    ss.read(buf, len);
-
-    return string(buf);
 }
 
 
@@ -243,6 +232,26 @@ int extractInt(stringstream &ss) {
 float extractFloat(stringstream &ss) {
     return _extractNum(ss).f;
 }
+
+// extractString
+//  - extracts a string from a stringstream
+//  - the length of the string (incl null-term) precedes the string itself
+//  - if a null terminator is not found as the last byte, exception is thrown
+//
+//  returns:
+//      - s, extracted string from ss, since null term found
+
+string extractString(stringstream &ss) {
+    int len = extractInt(ss);
+    char buf[len];
+    ss.read(buf, len);
+
+    if (!ss.fail() && buf[len-1] != '\0')
+        throw RPCException("rpcutils.extractString: Null-term not found");
+
+    return string(buf, len - 1); // -1 to exclude null term
+}
+
 
 
 // _readNum
@@ -299,5 +308,5 @@ void writeFloat(C150StreamSocket *sock, float f) {
 //  - lenToWrite can't be 0 for string, must at least have null terminator
 void writeString(C150StreamSocket *sock, const string &s) {
     writeInt(sock, s.length() + 1); // include null terminator
-    writeAndCheck(sock, s.c_str(), s.length() + 1)
+    writeAndCheck(sock, s.c_str(), s.length() + 1);
 }

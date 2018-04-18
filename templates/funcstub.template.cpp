@@ -21,24 +21,22 @@ readAndThrow(RPCSTUBSOCKET, argsBytes, argsSize);
 // use string stream to deconstruct args bytes into args
 stringstream ss;
 ss << string(argsBytes, argsSize);
-StatusCode argsCode = good_args; // assume that args are good for now
+StatusCode argsCode = good_bytes; // assume that args are good for now
 
 {declareArgs}
 
 try {{
 {readArgs}
-argsCode = checkArgs(ss);
+argsCode = checkBytes(ss);
 }} catch (RPCException e) {{ // should only be from extractString
-  argsCode = scrambled_args;
+  argsCode = scrambled_bytes;
 }}
 
 // send args code
 writeInt(RPCSTUBSOCKET, argsCode);
-if (argsCode != good_args) {{
-  debugStream << "proxy.{funcname}: " <<  debugStatusCode(argsCode);
-  string debugStr = debugStream.str(); 
-  logDebug(debugStream, C150APPLICATION, true);
-  throw RPCException(debugStr.c_str()); // if bad args, stop here
+if (argsCode != good_bytes) {{
+  debugStream << "proxy.{funcname}: " <<  debugStatusCode(argsCode) << ", for arguments";
+  logThrow(debugStream, C150APPLICATION, true);
 }}
 
 {% end args %}
