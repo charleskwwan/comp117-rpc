@@ -1,0 +1,406 @@
+<!DOCTYPE HTML>
+<!-- 
+ **********************************************************
+
+             TUFTS COMP 117 HOMEWORK ASSIGNMENT
+
+        Fill in your name, e-mail and answers to questions
+        in the sections provided below.
+
+          All questions are marked up: <li class="q">
+          All answers are marked up:   <li class="a">
+
+
+     PLEASE DO NOT MODIFY ANY THING OTHER THAN THE 
+     NAME, E-MAIL, AND ANSWER FIELDS (you may also add
+     css declarations in the <head> if you need them,
+     but usually you won't.
+
+ **********************************************************
+ -->
+
+
+<html lang="en">
+<head>
+<meta charset="utf-8"> 
+<title>Tufts COMP 117 Assignment &#8212; Remote Procedure Call Project Report</title>
+<link rel="stylesheet" type="text/css" href="http://www.cs.tufts.edu/comp/117/style/homework.css" />
+</head>
+
+<body class="homework">
+
+
+<!-- ******************************************************
+	   YOU MUST FILL IN YOUR NAME, UTLN AND EMAIL BELOW!!
+         (You may copy this from an earlier assignment
+                         if you like)
+
+     ****************************************************** -->
+
+
+<div class="student">
+<p>
+<span class="label">Student1 name: </span>
+Ka Wai Charles Wan
+<br>
+
+<span class="label">UTLN: </span>
+kwan01
+<br>
+
+<span class="label">E-mail: </span>
+<!-- DON'T FORGET UP UPDATE THE MAILTO: URI BELOW ALONG WITH
+     YOUR EMAIL IN THE ANCHOR.  IT SHOULD LOOK LIKE:
+ <a href="mailto:lady.gaga@cs.tufts.edu">lady.gaga@cs.tufts.edu</a>
+--> 
+
+<a href="mailto:ka.wan@tufts.edu">ka.wan@tufts.edu</a>
+<br>
+<br>
+<br>
+<span class="label">Student2 name: </span>
+Justin Jo
+<br>
+<span class="label">UTLN: </span>
+jjo01
+<br>
+
+<span class="label">E-mail: </span>
+<!-- DON'T FORGET UP UPDATE THE MAILTO: URI BELOW ALONG WITH
+     YOUR EMAIL IN THE ANCHOR.  IT SHOULD LOOK LIKE:
+ <a href="mailto:lady.gaga@cs.tufts.edu">lady.gaga@cs.tufts.edu</a>
+--> 
+
+<a href="mailto:justin.jo@tufts.edu">justin.jo@tufts.edu</a>
+
+<br>
+</p>
+</div>
+
+
+
+
+<div class="UpperLeftHeader">
+<p>Tufts COMP 117 (Spring 2018):
+<br>
+Internet-scale Distributed Systems
+</p>
+</div>
+
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - -
+		HOMEWORK TITLE
+  - -  - - - - - - - - - - - - - - - - - - - - - - -->
+
+
+<div class="headerdiv">
+<h1>
+Tufts COMP 117:<br>
+RPC Project Report
+</h1>
+</div>
+
+<!-- ******************************************************
+
+              PLEASE ANSWER QUESTIONS IN THE SECTIONS
+	      LABELED class="a" (for answer)
+
+     ****************************************************** -->
+
+
+
+
+<div class="main">
+
+<h2 id="questions">Questions</h2>
+<!-- - - - - - - - - - - - - - - - - - - - - - - -
+		QUESTION
+  - -  - - - - - - - - - - - - - - - - - - - - - - -->
+<div class="qa">
+
+<ol class="qa">
+<li class="q">Did you implement an rpcgenerate program and does it handle all legal IDL files? If not, which test cases should we try in your submission  directory?</li>
+<li class="a">
+We believe that our <em>rpcgenerate</em> can handle any legal IDL file.
+</li>
+
+<li class="q">What programming language did you use for your rpcgenerate program?</li>
+<li class="a">
+Put an X in the space next to your choice:
+<ul>
+  <li>_____ C++ (using the provided type framework)</li>
+  <li>__<b>X</b>__ Python (using the provided <code>idl_to_json</code>)</li>
+  <li>_____ Ruby (using the provided <code>idl_to_json</code>)</li>
+</ul>
+<br>
+<b>Disclaimer:</b> While <em>rpcgenerate</em> is written in Python, we make use of some C++ code to simplify the process. See the <a href="#mixed">Mixed Python and C++ code</a> and <a href="templates">Templates</a> subsections for more information.
+</li>
+
+<li class="q">Briefly explain the protocol you use over TCP to request function calls and return the results.</li>
+<li class="a">
+Our protocol is explained in the <a href="#protocol">Protocol</a> subsection of the <a href="#reportbody">Additional Information
+</a> section below.</li>
+
+<li class="q">Did you get help from anyone other than your teammate? If "yes", then briefly explain who helped you and how.</li>
+<li class="a">
+We only collaborated with each other.
+</li>
+
+
+<li class="q">(optional) Do you have any other comments on this assignment (e.g. was it worthwhile, what did you learn from it, do you have suggestions for improvment if the course is offered again)?</li>
+<li class="a">
+<b>Charles:</b> The idea of RPC is not new to me. In a previous internship, I worked on a distributed task processor that used a master/agent model. However, I was a client of the component of the processor that made use of RPC, and so never got the chance to examine it further nor understand its inner workings. This assignment demonstrated the clean abstraction provided by a function call, which may or may not be a remote call from the client's perspective, and how it permits programs to be written with little to no variation compared to completely non-RPC-dependent programs.
+<br><br>
+Something I would have liked to see more of is the consideration of the distributed nature in the server-client connection. When writing this assignment, I realized that the server only accepts one client at a time, a simplification that allows our RPC protocol to be less constrained as we do not have to consider possible interference from other clients or other function calls from the same client; however, that is certainly the case in production RPC systems. Of course, given the relatively short period of time and the fact that this is not a concurrency course, building in such a requirement would undoubtedly be unfeasible, though some way of factoring it in would be welcome to me.
+<br><br>
+<b>Justin:</b> I thought that this assignment was a good exploration of distributed concepts at a basic and stripped down level. I had not had any practical experience with neither RPC nor writing programs that create other programs, and this assignment had enough substance to provide that introduction while not being overwhelming in its scope. As Charles mentioned, it was valuable to see both the client and server sides of the RPC system. An interesting extension to this assignment might be to expand the client behavior with two different servers, where the client communicates with both of them to achieve a desired functionality.
+</li>
+
+</ol>
+
+<!-- * * * * * * * * * * * * * * * * * * * * * -->
+<!--         ADDITIONAL INFORMATION            -->
+<!-- * * * * * * * * * * * * * * * * * * * * * -->
+
+<h2 id="reportbody">Additional Information</h2>
+
+<h3 id="usage">Usage</h3>
+
+<h4>rpcgenerate</h4>
+
+<p>Usage: <em>./rpcgenerate [-h] [-d OUTDIR] idlfiles [idlfiles ...]</em></p>
+<ul>
+<li><em>-h, --help</em>: Help message, courtesy of Python's <em>argparse</em> module</li>
+<li><em>-d OUTDIR, --outdir OUTDIR</em>: Specifies the output directory for proxy and stub files, defaults to current directory</li>
+<li><em>idlfiles</em>: a series of IDL files, a proxy and stub is generated for each one
+</ul>
+
+<p>We encountered some interesting behavior when testing on idl files not in the same directory as <em>rpcgenerate</em>, in which proxies and stubs were put in the same directory as its source IDL file. As such, we decided to introduced the option to specify an output directory for proxies and stubs, which defaults to the current directory.</p>
+
+<h4>Makefile</h4>
+
+Some information on specific rules:
+<ul>
+<li><em>%server</em>: Uses our <em>rpcserver.cpp</em> to create a server for a given IDL file; this rule causes the server to log debug information to "%serverdebug.txt" (named with the IDL file's prefix)</li>
+<li><em>%server-console</em>: Same as the rule for %server, but causes the server to log to the console instead</li>
+</ul>
+
+<h3 id="protocol">Protocol</h3>
+
+<h4>Status Codes</h4>
+
+<p>Status codes are used by the server to communicate to the client the former's acceptance or rejection of the function information provided by the latter.</p>
+<pre>
+enum StatusCode {
+    // 000 range - general
+    success = 0,
+    incomplete_bytes = 1, // unexpected number of bytes received
+    no_null_term_found = 2,
+    timed_out = 3,
+
+    // 100 range - function names
+    existing_func = 100,
+    nonexistent_func = 101,
+
+    // 200 range - arguments/results
+    good_bytes = 200,
+    too_many_bytes = 201,
+    too_few_bytes = 202,
+    scrambled_bytes = 203 // correct number of bytes, badly organized
+};
+</pre>
+
+<p>Range 0-99 are reserved for status codes regarding general communication.</p>
+<p>Range 100-199 are reserved for status codes regarding the existence of functions when a client requests to call a function on the server.</p>
+<p>Range 200-299 are reserved for status codes regarding the arguments (if any) the server received from the client, including things like whether or not there are enough bytes to fill the expected number and sizes of arguments.</p>
+
+<h4>Serialization</h4>
+
+<ul>
+<li><em>int/float</em>: 4 bytes sent and received in network byte order (big-endian), converted to and from host byte order</li>
+<li><em>string</em>: Integer sent first to indicate the length of the string, including the null-terminator, followed by the string itself. A string may contain any characters, including the null character. </li>
+<li><em>arrays</em>: Recursively serialize to builtin types</li>
+<li><em>structs</em>: Recursively serialize to builtin types</li>
+</ul>
+
+<h4>Messaging protocol for calling functions</h4>
+
+<ol>
+<li>
+Proxy requests to call a function on the stub
+<ol>
+<li>Proxy sends the length of the function name to the stub</li>
+<li>Proxy sends the function name to the stub</li>
+</ol>
+</li>
+<li>
+Stubs receives the desired function's name from the proxy, and informs the client whether or not the function exists (by status code)
+<ul>
+<li>If the function exists, continue on</li>
+<li>If the function does not exist, go back to waiting for a function request</li>
+</ul>
+</li>
+<li>
+Proxy receives the function request status code
+<ul>
+<li>If the function exists, continue on</li>
+<li>If the function does not exist, throw an exception</li>
+</ul>
+</li>
+<li>
+Proxy sends the function's arguments to the stub
+<ol>
+<li>Proxy sends the total size of all the function's arguments</li>
+<li>Proxy serializes and sends the function's arguments, one by one, to the stub</li>
+</ol>
+</li>
+<li>Stub receives all the function's arguments bytes at once, and deserializes individual arguments (using a stringstream)</li>
+<li>
+Stub informs the proxy whether or not the arguments received matched what was expected (by status code)
+<ul>
+<li>If the arguments were good, continue on</li>
+<li>If the arguments were not good, go back to waiting for a function request</li>
+</ul>
+</li>
+<li>
+Proxy receives the argument status code
+<ul>
+<li>If the arguments were good, continue on</li>
+<li>If the arguments were not good, throw an exception</li>
+</ul>
+</li>
+<li>Stub calls the "real" function with its arguments and saves the result</li>
+<li>
+Stub sends the result of the call to the proxy
+<ol>
+<li>Stub sends the total size of the result</li>
+<li>Stub serializes and sends the result to the proxy</li> 
+</ol>
+</li>
+<li>
+Proxy receives the bytes of the result all at once, and deserializes it (using a string stream)
+<ul>
+<li>If the result does not match what was expected, an exception is thrown</li>
+<li>Otherwise, the result is returned to the caller</li>
+</ul>
+</li>
+</ol>
+
+<p>Note that if the function expects no arguments, no arguments and its related status codes are sent from the proxy to the stub; the stub simply calls the function. Similarly, if the function's return type is 'void', no result is sent from the stub to the proxy. Our <em>rpcgenerate</em> removes blocks of code from the templates as needed to match.</p>
+
+<h3 id="grading">Grade Logs</h3>
+
+<h4>Proxies</h4>
+
+<p>For proxies, since we do cannot create a universal client, we assume that a grade log exists and proxy code will write the following to it:</p>
+<ol>
+<li>When the proxy requests to run a function</li>
+<li>If the function does not exists, a notification is logged</li>
+<li>
+If arguments exist, a notification that arguments are being sent is logged
+<ul>
+<li>Not included: The number of arguments, the arguments themselves</li>
+<li>We decided not to log the arguments because if there were too many, they would clog up the log. Additionally, since our value serialization works at the builtin type level, we couldn't really print structs or arrays easily in one piece.</li>
+</ul>
+</li>
+<li>If the server does not accept the arguments, a notification is logged</li>
+<li>
+If a result is expected, a notification that the result is being received is logged
+<ul>
+<li>Not included: The size of the result, the result itself</li>
+<li>For the same reasons we do not log the arguments, we do not log the result specifically.</li>
+</ul>
+</li>
+<li>If the proxy does not accept the result, a notification is logged</li>
+<li>When the proxy completes a call to a function</li>
+</ol>
+
+<h4>Stubs</h4>
+
+<ol>
+<li>When the stub receives a function request</li>
+<li>If the function requested does not exist, a notification is logged</li>
+<li>
+If the function expects arguments, a notification that arguments are being received is logged
+<ul>
+<li>Not included: The number of arguments, the arguments themselves</li>
+</ul>
+</li>
+<li>If the stub does not accept the arguments, a notification is logged</li>
+<li>When the stub calls the "true" IDL function</li>
+<li>
+If the function has a result, a notification is logged
+<ul>
+<li>Not included: The size of the result, the result itself</li>
+</ul>
+</li>
+<li>When the stub completes a function request</li>
+</ol>
+
+<h3 id="filestructure">File Structure</h3>
+
+<p>As with any good program design, it is important to separate your concerns and create abstractions. To aid in that endeavour and for better organization, we have split our files up in various directories. This section aims to provide some information to help navigation. From the top-level <em>RPC</em> directory:</p>
+
+<ul>
+<li><em>idl_to_json.cpp</em>: Retained from RPC.samples</li>
+<li><em>Makefile</em>: Retained from RPC.samples, with some modifications, including the removal of rules for sample clients and servers</li>
+<li><em>rpcgenerate</em>: Symbolic link to <em>rpcgen/rpcgen.py</em></li>
+<li><em>rpcproxyhelper.[cpp|h]</em>: Retained from RPC.samples</li>
+<li><em>rpcserver.cpp</em>: Retained from RPC.samples, with some modifications</li>
+<li><em>rpcstubhelper.[cpp|h]</em>: Retained from RPC.samples</li>
+<li><em>rpcutils.[cpp|h]</em>: Utility functions for proxies and stubs; written to avoid cluttering <em>rpcgenerate</em></li>
+<li>
+<b>rpcgen</b>: Contains Python source files for <em>rpcgenerate</em>
+<ul>
+<li><em>proxy.py</em>: Functions to generate code for proxies</li>
+<li><em>rpcgen.py</em>: Executable to generate proxy and stub files for IDL files</li>
+<li><em>shared.py</em>: Functions to generate code shared between proxies and stubs</li>
+<li><em>stub.py</em>: Functions to generate code for stubs</li>
+<li><em>utils.py</em>: Utility functions for <em>rpcgenerate</em> as a whole</li>
+</ul>
+</li>
+<li>
+<b>templates</b>: Contains template files for proxies and stubs
+<ul>
+<li><em>client.template.cpp</em>: For writing clients that use our helper code, and contains places to fill with intended client code; not used by <em>rpcgenerate</em></li>
+<li><em>dispatch.template.cpp</em>: For a stub's dispatch function</li>
+<li><em>funcproxy.template.cpp</em>: For a proxy function that is called by the client and makes a call to the stub</li>
+<li><em>funcstub.template.cpp</em>: For a stub function that wraps around ones specified in an IDL files, and is called by dispatchFunction</li>
+</ul>
+</li>
+</ul>
+
+<h3 id="challenges">Challenges and Other Features</h3>
+
+<h4 id="mixed">Mixed Python and C++ code</h4>
+
+<p>It did not make sense to us to have C++ code that required no dynamic variation depending on the IDL functions, whether or not it was being used in the proxy or stub, etc. written by our Python code. So, we wrote many shared utility functions in rpcutils.cpp, which were linked in proxies and stubs via rpcutils.h. These files followed the spirit of the provided rpcproxyhelper.* and rpcstubhelper.* files, which were also linked in proxies and stubs.</p>
+
+<h4 id="templates">Templates</h4>
+
+<p>Our <em>rpcgenerate</em> makes use of templates written in (not fully legal) C++ to help de-clutter our Python code and provide a consistent, default strOur rpcgenerate also makes use of templates written in (not fully legal) C++ to help de-clutter our Python code and provide a consistent, default structure for proxies and stubs. In other words, our Python code fills in, and/or modifies certain parts from our templates.</p>
+
+<p>Our templates essentially have their own mini-language:</p>
+
+<ul>
+<li>{{, }}: Open and closing curly braces, replaced with { and }</li>
+<li>{&lt;var&gt;}: 'var' is an identifier and variable to be replaced with some code</li>
+<li>{% begin &lt;block&gt; %}, {% end &lt;block&gt; %}: delimits a block named 'block' of template code that can be replaced or removed entirely</li>
+</ul>
+
+<h4>Endianness</h4>
+
+<p>As per specifications, we have assumed a 32-bit architecture, but did not assume an endianness for both the client and server. To handle possibly different byte orders, we emulate traditional Internet protocols and communicate using big-endian. We accomplish this by using the <em>htonl()</em> and <em>ntohl</em> functions provided in <em>arpa/inet.h</em> to convert from host byte order to network byte order (big-endian), and vice versa, respectively.</p>
+
+<h4>Using String Streams</h4>
+
+<p>When we read arguments and functions for functions, although they are serialized and sent one-by-one, we read all the constituent bytes at once. In order to reconstruct the arguments and function, we use stringstreams, from which we read builtin int, float, and string (including null-terminators) types, which we use in turn to recreate arrays and structs. This approach also allows us to verify whether or not the sender has sent too many or too few bytes to exactly fill the expected arguments or result.</p>
+
+<h4>Timeouts</h4>
+
+<p>On the server side, we have implemented timeouts for reads. If a read times out, as with EOFs, we assume that the client is dead and we close the current function request without informing the client. We could not implement timeouts on the client side because we do not have a universal client.</p>
+
+</div>
+</div>
+</body>
+</html>
